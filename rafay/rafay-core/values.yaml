@@ -34,7 +34,8 @@ global:
       capacity_type: "" 
       instance_type: ""
       amifamily: ""
-      shared_subnet.enabled : false
+      shared_subnet:
+        enabled : false
       tag:
         enable: false
   cluster_name: ""
