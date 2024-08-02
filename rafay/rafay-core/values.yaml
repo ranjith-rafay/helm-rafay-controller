@@ -25,6 +25,10 @@ global:
   is_external_database: false
   external_database_host: "localhost"
   external_database_port: "5432"
+  monitoring:
+    integrations: 
+      amp:
+        enabled: false
   admin_user: super-admin@rafay.co
   admin_password: changeplz
   partner_name: Rafay Ranjith
