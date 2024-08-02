@@ -29,6 +29,20 @@ global:
     integrations: 
       amp:
         enabled: false
+  karpenter:
+    instance:
+      capacity_type: "" 
+      instance_type: ""
+      amifamily: ""
+      shared_subnet.enabled : false
+      tag:
+        enable: false
+  cluster_name: ""
+  minReplicaCount: 2
+  isCustomRegistry: false
+  edge.irsa_role_enabled: false
+  engine_api_blob_provider: ""
+  engine_api_blob_bucket: ""
   admin_user: super-admin@rafay.co
   admin_password: changeplz
   partner_name: Rafay Ranjith
