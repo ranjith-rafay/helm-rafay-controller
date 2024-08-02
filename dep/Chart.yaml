@@ -1,7 +1,7 @@
 apiVersion: v2
 name: rafay-dep
 description: A Helm chart for Kubernetes
-appVersion: "1.1"
+appVersion: "2.5.0"
 version: 2.5.0 
 
 # A chart can be either an 'application' or a 'library' chart.
