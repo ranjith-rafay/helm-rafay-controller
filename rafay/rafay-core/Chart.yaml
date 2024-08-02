@@ -2,7 +2,7 @@ apiVersion: v1
 appVersion: "2.5.1"
 description: A Helm chart for Rafay core
 name: rafaycore
-version: 2.5.2
+version: 2.5.3
 dependencies:
 - name: monitoring
   version: 0.1.0
