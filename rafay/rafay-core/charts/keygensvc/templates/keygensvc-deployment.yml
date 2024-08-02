@@ -1,0 +1,157 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: keygensvc
+  name: keygensvc
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: keygensvc
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: keygensvc
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - keygensvc
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - env:
+        - name: ENV
+          value: {{ .Values.global.deployment_env }}
+        - name: PYTHONUNBUFFERED
+          value: "0"
+        - name: KEYGEN_GRPC_PORT
+          value: "50505"
+        - name: KEYGEN_DB_HOST
+          value: postgres-admin
+        - name: KEYGEN_DB_PORT
+          value: "5432"
+        - name: VAULT_URL
+          value: http://vault-helm:8200
+        - name: VAULT_TOKEN
+          value: {{ .Values.global.secrets.VR_TOKEN }}
+        - name: VAULT_ENABLED
+          value: "True"
+        - name: VAULT_ENABLED_DEPLOY
+          value: "False"
+        - name: KEYGEN_DB_NAME
+          valueFrom:
+            secretKeyRef:
+              key: admin.db.name
+              name: keygensvc-secrets
+        - name: KEYGEN_DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: admin.db.user
+              name: keygensvc-secrets
+        {{- if .Values.global.is_external_database }}
+        - name: KEYGEN_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: keygensvc-db-secret
+        {{- else }}
+        - name: KEYGEN_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: keygendbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: aws.access.key.id
+              name: keygensvc-secrets
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: aws.secret.access.key
+              name: keygensvc-secrets
+        - name: AWS_PRIMARY_REGION
+          valueFrom:
+            secretKeyRef:
+              key: aws.primary.region
+              name: keygensvc-secrets
+        image: {{ .Values.keygensvc_image }}
+        imagePullPolicy: IfNotPresent
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+        name: keygensvc
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "/opt/rcloud/keygensvc/poststart.sh"]
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        ports:
+        - containerPort: 50505
+          name: keygensvc
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:5000"]
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:5000"]
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: keygensvc
+      imagePullSecrets:
+      - name: rafay-edge-registry-creds
+      restartPolicy: Always
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: keygensvc
+  name: keygensvc
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: keygensvc
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

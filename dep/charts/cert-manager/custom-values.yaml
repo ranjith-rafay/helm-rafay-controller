@@ -1,0 +1,20 @@
+image:
+  repository: registry.rafay-edge.net/jetstack/cert-manager-controller:v1.12.3
+  pullPolicy: IfNotPresent
+
+webhook:
+  image:
+    repository: registry.rafay-edge.net/jetstack/cert-manager-webhook:v1.12.3
+    pullPolicy: IfNotPresent
+    
+cainjector:
+  enabled: true
+  image:
+    repository: registry.rafay-edge.net/jetstack/cert-manager-cainjector:v1.12.3
+    pullPolicy: IfNotPresent
+
+startupapicheck:
+  enabled: true
+  image:
+    repository: registry.rafay-edge.net/jetstack/cert-manager-ctl:v1.12.3
+    pullPolicy: IfNotPresent

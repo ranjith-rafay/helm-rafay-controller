@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: self-signed-ca-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: certmanager
+    chart: {{ template "certificates.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+spec:
+  selfSigned: {}

@@ -1,0 +1,60 @@
+---
+# admin logging config map
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{.Chart.Name}}-logging-conf
+data:
+  logging.conf: |-
+    [loggers]
+    keys=root,authsrv
+
+    [logger_root]
+    handlers=screen
+    level=INFO
+
+    [logger_authsrv]
+    handlers=mdc
+    propagate=0
+    level=DEBUG
+    qualname=authsrv
+
+    [logger_configsrv]
+    handlers=mdc
+    propagate=0
+    level=DEBUG
+    qualname=configsrv
+
+    [logger_dynaconfigs]
+    handlers=mdc
+    propagate=0
+    level=DEBUG
+    qualname=dyna_configs
+
+    [formatters]
+    keys=simple,complex,mdc_formatter
+
+    [formatter_simple]
+    format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+    [formatter_mdc_formatter]
+    class=adminsrv.common.logging.mdc_logger.MDCFormatter
+    format=[%(asctime)s] [%(process)s] [t:%(X_B3_TraceId)s,ps:%(X_B3_ParentSpanId)s,s:%(X_B3_SpanId)s,a:%(X_B3_AccountId)s,o:%(X_B3_OrganizationId)s,p:%(X_B3_PartnerId)s] [%(levelname)s] [%(name)s] %(message)s
+
+    [formatter_complex]
+    format=%(asctime)s - %(name)s - %(levelname)s - %(module)s : %(lineno)d - %(message)s
+
+    [handlers]
+    keys=screen,mdc
+
+    [handler_screen]
+    class=StreamHandler
+    formatter=simple
+    level=INFO
+    args=(sys.stdout,)
+
+    [handler_mdc]
+    class=StreamHandler
+    formatter=mdc_formatter
+    level=DEBUG
+    args=(sys.stdout,)

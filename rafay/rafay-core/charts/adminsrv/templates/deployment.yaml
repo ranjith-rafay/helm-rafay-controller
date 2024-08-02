@@ -1,0 +1,463 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: admin-api
+  name: admin-api
+spec:
+  selector:
+    matchLabels:
+      app: admin-api
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: admin-api
+        velero.io/exclude-from-backup: "true"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - admin-api
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+      - name: migrations
+        image: {{ .Values.adminsrv_docker_image }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: IS_SELF_SIGNED
+          value: "True"
+        - name: DEFAULT_DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: admin.db.user
+              name: {{.Chart.Name}}-secrets
+        {{- if .Values.global.is_external_database }}  
+        - name: DEFAULT_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: admindb-db-secret
+        {{- else }} 
+        - name: DEFAULT_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: admindbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end}}      
+        - name: DEFAULT_DB_NAME
+          value: admindb
+        - name: EDGE_DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: edge.db.user
+              name: {{.Chart.Name}}-secrets
+        {{- if .Values.global.is_external_database }}  
+        - name: EDGE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedb-db-secret
+        {{- else }}    
+        - name: EDGE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}      
+        - name: EDGE_DB_NAME
+          value: edgedb
+        - name: SEND_GRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: sendgrid.apikey
+              name: {{.Chart.Name}}-secrets
+        - name: TWILIO_SID
+          valueFrom:
+            secretKeyRef:
+              key: twilio.sid
+              name: {{.Chart.Name}}-secrets
+        - name: TWILIO_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: twilio.authtoken
+              name: {{.Chart.Name}}-secrets
+        - name: DEFAULT_DB_HOST
+          value: postgres-admin
+        - name: CONFIG_PROCESSOR_ENDPOINT
+          value: config-processor:50555
+        - name: WORKLOAD_PROCESSOR_ENDPOINT
+          value: workload-processor:50001
+        - name: DEFAULT_DB_PORT
+          value: "5432"
+        - name: EDGE_DB_HOST
+          value: postgres-admin
+        - name: EDGE_DB_PORT
+          value: "5432"
+        - name: REDIS_HOST
+          value: "{{ .Values.global.redis_endpoint  }}"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: KEYGEN_GRPC_HOST
+          value: keygensvc
+        - name: KEYGEN_GRPC_PORT
+          value: "50505"
+        - name: CRYPTO_GRPC_HOST
+          value: cryptosvc
+        - name: CRYPTO_GRPC_PORT
+          value: "50505"
+        - name: V2_CONFIG_HOST
+          value: rafay-config
+        - name: CERT_PATH
+          value: /opt/certs
+        - name: EDGE_SUFFIX
+          value: {{ .Values.global.edge_suffix }}
+        - name: EDGESRV_GRPC_HOST
+          value: edgesrv.rafay-core.svc.cluster.local
+        - name: EDGESRV_GRPC_PORT
+          value: "50701"
+        - name: PROD
+          value: "true"
+        - name: INTERNAL_TRIGGER_ENDPOINTS
+          value: "http://rafay-pipeline:9001/v2/pipeline/subscription/internal,http://rafay-hub:9001/v3/hub/subscription/internal"
+        - name: REGISTRY_DOMAIN
+          value: rcr.{{ .Values.global.default_partner_console_domain }}
+        - name: ENV
+          value: production
+        - name: DEFAULT_PARTNER_HOST
+          value: console.{{ .Values.global.default_partner_console_domain }}
+        - name: DEFAULT_PARTNER_DOMAIN
+          value: {{ .Values.global.default_partner_console_domain }}
+        - name: DEFAULT_PARTNER_OPS_HOST
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}
+        - name: RAFAY_CLI_BUCKET_URL
+          value: {{ .Values.rafay_cli_bucket_url }}
+        - name: RAFAY_REGISTRY_DOMAIN_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              key: registry.user
+              name: {{.Chart.Name}}-secrets
+        - name: RAFAY_REGISTRY_DOMAIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: registry.password
+              name: {{.Chart.Name}}-secrets
+        - name: IS_KAFKA
+          value: "True"
+        - name: KAFKA_URL
+          value: kafka-core:9092
+        - name: PARTNER_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_name
+                name: admin-partner-config
+        - name: PARTNER_ADMIN_USERNAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_admin_user
+                name: admin-partner-config
+        - name: PARTNER_HOST_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_console_host
+                name: admin-partner-config
+        - name: PARTNER_OPS_HOST_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_opsconsole_host
+                name: admin-partner-config
+        - name: PARTNER_PRODUCT_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_product_name
+                name: admin-partner-config
+        - name: PARTNER_ADMIN_PASSWORD
+          valueFrom:
+             secretKeyRef:
+                key: default_partner_admin_password
+                name: {{.Chart.Name}}-secrets
+        - name: SUPER_ADMIN_PASSWORD
+          valueFrom:
+             secretKeyRef:
+                key: super_admin_password
+                name: {{.Chart.Name}}-secrets
+        - name: SUPER_ADMIN_USERNAME
+          valueFrom:
+             configMapKeyRef:
+                key: super_admin_user
+                name: admin-partner-config
+        #- name: PARTNER_LOGO_URL
+          #valueFrom:
+             #configMapKeyRef:
+                #key: default_partner_logo_url
+                #name: admin-partner-config
+        - name: ACCOUNT_CREATION_STRATEGY
+          value: AUTO
+        - name: ORGANIZATION_APPROVAL
+          value: "false"
+        - name: DEFAULT_PARTENER_SIGNUPENABLED
+          value: "True"
+        - name: IS_SELF_HOSTED
+          value: "True"           
+        command:
+        - "/bin/sh"
+        - "/opt/rcloud/adminsrv/poststart.sh"
+        volumeMounts:
+        - name: {{.Chart.Name}}-logging-conf
+          mountPath: /opt/logging
+      containers:
+      - env:
+        - name: IS_SELF_SIGNED
+          value: "True"
+        - name: DEPLOYMENT_ENV
+          value: {{ .Values.global.deployment_env }} 
+        - name: DEFAULT_DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: admin.db.user
+              name: {{.Chart.Name}}-secrets
+        {{- if .Values.global.is_external_database }}  
+        - name: DEFAULT_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: admindb-db-secret
+        {{- else }} 
+        - name: DEFAULT_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: admindbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end}}      
+        - name: DEFAULT_DB_NAME
+          value: admindb
+        - name: EDGE_DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: edge.db.user
+              name: {{.Chart.Name}}-secrets
+        {{- if .Values.global.is_external_database }}  
+        - name: EDGE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedb-db-secret
+        {{- else }}    
+        - name: EDGE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}      
+        - name: EDGE_DB_NAME
+          value: edgedb
+        - name: SEND_GRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: sendgrid.apikey
+              name: {{.Chart.Name}}-secrets
+        - name: TWILIO_SID
+          valueFrom:
+            secretKeyRef:
+              key: twilio.sid
+              name: {{.Chart.Name}}-secrets
+        - name: TWILIO_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: twilio.authtoken
+              name: {{.Chart.Name}}-secrets
+        - name: DEFAULT_DB_HOST
+          value: postgres-admin
+        - name: CONFIG_PROCESSOR_ENDPOINT
+          value: config-processor:50555
+        - name: WORKLOAD_PROCESSOR_ENDPOINT
+          value: workload-processor:50001
+        - name: DEFAULT_DB_PORT
+          value: "5432"
+        - name: EDGE_DB_HOST
+          value: postgres-admin
+        - name: EDGE_DB_PORT
+          value: "5432"
+        - name: REDIS_HOST
+          value: "{{ .Values.global.redis_endpoint  }}"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: KEYGEN_GRPC_HOST
+          value: keygensvc
+        - name: KEYGEN_GRPC_PORT
+          value: "50505"
+        - name: CRYPTO_GRPC_HOST
+          value: cryptosvc
+        - name: CRYPTO_GRPC_PORT
+          value: "50505"
+        - name: V2_CONFIG_HOST
+          value: rafay-config
+        - name: CERT_PATH
+          value: /opt/certs
+        - name: EDGE_SUFFIX
+          value: {{ .Values.global.edge_suffix }}
+        - name: EDGESRV_GRPC_HOST
+          value: edgesrv.rafay-core.svc.cluster.local
+        - name: EDGESRV_GRPC_PORT
+          value: "50701"
+        - name: PROD
+          value: "true"
+        - name: REGISTRY_DOMAIN
+          value: rcr.{{ .Values.global.default_partner_console_domain }}
+        - name: ENV
+          value: production
+        - name: DEFAULT_PARTNER_HOST
+          value: console.{{ .Values.global.default_partner_console_domain }}
+        - name: DEFAULT_PARTNER_DOMAIN
+          value: {{ .Values.global.default_partner_console_domain }}
+        - name: DEFAULT_PARTNER_OPS_HOST
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}
+        - name: RAFAY_CLI_BUCKET_URL
+          value: {{ .Values.rafay_cli_bucket_url }}
+        - name: RAFAY_REGISTRY_DOMAIN_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              key: registry.user
+              name: {{.Chart.Name}}-secrets
+        - name: RAFAY_REGISTRY_DOMAIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: registry.password
+              name: {{.Chart.Name}}-secrets
+        - name: IS_KAFKA
+          value: "True"
+        - name: KAFKA_URL
+          value: kafka-core:9092
+        - name: PARTNER_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_name
+                name: admin-partner-config
+        - name: PARTNER_ADMIN_USERNAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_admin_user
+                name: admin-partner-config
+        - name: PARTNER_HOST_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_console_host
+                name: admin-partner-config
+        - name: PARTNER_OPS_HOST_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_opsconsole_host
+                name: admin-partner-config
+        - name: PARTNER_PRODUCT_NAME
+          valueFrom:
+             configMapKeyRef:
+                key: default_partner_product_name
+                name: admin-partner-config
+        - name: PARTNER_ADMIN_PASSWORD
+          valueFrom:
+             secretKeyRef:
+                key: default_partner_admin_password
+                name: {{.Chart.Name}}-secrets
+        - name: SUPER_ADMIN_PASSWORD
+          valueFrom:
+             secretKeyRef:
+                key: super_admin_password
+                name: {{.Chart.Name}}-secrets
+        - name: SUPER_ADMIN_USERNAME
+          valueFrom:
+             configMapKeyRef:
+                key: super_admin_user
+                name: admin-partner-config
+        #- name: PARTNER_LOGO_URL
+          #valueFrom:
+             #configMapKeyRef:
+                #key: default_partner_logo_url
+                #name: admin-partner-config
+        - name: ACCOUNT_CREATION_STRATEGY
+          value: AUTO
+        - name: ORGANIZATION_APPROVAL
+          value: "false"
+        - name: DEFAULT_PARTENER_SIGNUPENABLED
+          value: "True"
+        - name: IS_SELF_HOSTED
+          value: "True"          
+        image: {{ .Values.adminsrv_docker_image }}
+        imagePullPolicy: IfNotPresent
+        name: admin-api
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - name: adminsrv-logging-conf
+          mountPath: /opt/logging
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+      - name: rafay-edge-registry-creds
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      volumes:
+      - configMap:
+          name: {{.Chart.Name}}-logging-conf
+        name: {{.Chart.Name}}-logging-conf
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: admin-api
+  name: admin-api
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: admin-api
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

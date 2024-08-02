@@ -1,0 +1,161 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cryptosvc
+  name: cryptosvc
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: cryptosvc
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: cryptosvc
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - cryptosvc
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - env:
+        - name: ENV
+          value: {{ .Values.global.deployment_env }}
+        - name: PYTHONUNBUFFERED
+          value: "0"
+        - name: CRYPTO_GRPC_CORE_PORT
+          value: "50505"
+        - name: CRYPTO_GRPC_EDGE_PORT
+          value: "50506"
+        - name: KEYGEN_GRPC_HOST
+          value: keygensvc
+        - name: KEYGEN_GRPC_PORT
+          value: "50505"
+        - name: CERTS
+          value: /opt/rcloud/certs
+        - name: VAULT_URL
+          value: http://vault-helm:8200
+        - name: VAULT_TOKEN
+          value: {{ .Values.secrets.VR_TOKEN }}
+        - name: VAULT_ENABLED
+          value: "True"
+        - name: VAULT_ENABLED_DEPLOY
+          value: "False"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: aws.access.key.id
+              name: cryptosvc-secrets
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: aws.secret.access.key
+              name: cryptosvc-secrets
+        - name: AWS_PRIMARY_REGION
+          valueFrom:
+            secretKeyRef:
+              key: aws.primary.region
+              name: cryptosvc-secrets
+        image: {{ .Values.cryptosvc_image }}
+        imagePullPolicy: IfNotPresent
+        name: cryptosvc
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        ports:
+        - containerPort: 50505
+          name: cryptosvc-core
+          protocol: TCP
+        - containerPort: 50506
+          name: cryptosvc-edge
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /opt/rcloud/certs
+          name: certs
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:5000"]
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:5000"]
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: cryptosvc
+      imagePullSecrets:
+      - name: rafay-edge-registry-creds
+      restartPolicy: Always
+      volumes:
+      - name: certs
+        projected:
+          sources:
+          - secret:
+              items:
+              - key: tls.crt
+                path: core.crt
+              - key: tls.key
+                path: core.key
+              name: selfsigned-cert-tls-cryptosvc
+          - secret:
+              items:
+              - key: tls.crt
+                path: kmi.crt
+              name: selfsigned-cert-tls-kmi-wrap
+          - secret:
+              items:
+              - key: tls.crt
+                path: ca.pem
+              name: infra-ca-tls
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: cryptosvc
+  name: cryptosvc
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cryptosvc
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

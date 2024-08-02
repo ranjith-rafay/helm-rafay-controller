@@ -1,0 +1,9 @@
+prometheus_image: registry.rafay-edge.net/prometheus:v2.31.1
+monitoring:
+  enabled: true
+
+prometheus_image: registry.rafay-edge.net/rafay/prometheus:v2.49.1
+memory_requests: 200Mi
+cpu_requests: 100m
+memory_limits: 500Mi
+cpu_limits: "1"

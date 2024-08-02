@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rafay-config-rb
+subjects:
+- kind: ServiceAccount
+  name: rafay-config-sa
+roleRef:
+  kind: Role
+  name: rafay-config-role
+  apiGroup: rbac.authorization.k8s.io

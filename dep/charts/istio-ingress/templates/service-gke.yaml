@@ -1,0 +1,46 @@
+{{- if eq .Values.global.deployment_type "GKE" }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- if .Values.global.external_dns.enabled}}
+    external-dns.alpha.kubernetes.io/hostname: "ui.{{ .Values.global.default_partner_console_domain }}"
+  {{- end }}
+  name: istio-ingressgateway
+  namespace: istio-system
+  labels:
+    app: istio-ingressgateway
+    istio: ingressgateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: istio-ingressgateway
+    istio: ingressgateway
+  ports:
+    - name: status-port
+      nodePort: 30326
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+    - name: http2
+      nodePort: 30426
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+    - name: https
+      nodePort: 30526
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+    - name: tls
+      nodePort: 30626
+      port: 15443
+      protocol: TCP
+      targetPort: 15443
+    - name: http2-insecure
+      nodePort: 30726
+      port: 81
+      protocol: TCP
+      targetPort: 8081
+  {{- end }}

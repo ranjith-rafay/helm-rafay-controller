@@ -1,0 +1,15 @@
+{{- if eq .Values.global.generate_self_signed_cert true }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: repo-istio-selfsigned-cert
+spec:
+  dnsNames:
+    - repo.{{ .Values.global.default_partner_console_domain }}
+  secretName: selfsigned-cert-tls-repo
+  duration: 87600h
+  renewBefore: 12h
+  issuerRef:
+    name: {{ .Values.global.issuer_name | default "self-signed-ca-cert" }}
+    kind: ClusterIssuer
+{{- end }}

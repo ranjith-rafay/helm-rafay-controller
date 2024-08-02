@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: infra-relay
+  name: infra-relay
+spec:
+  progressDeadlineSeconds: 600
+  {{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+  {{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+  {{- end }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: infra-relay
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: infra-relay
+        velero.io/exclude-from-backup: "true"
+    spec:
+      affinity:
+         podAntiAffinity:
+           preferredDuringSchedulingIgnoredDuringExecution:
+           - weight: 100
+             podAffinityTerm:
+               labelSelector:
+                 matchExpressions:
+                   - key: app
+                     operator: In
+                     values:
+                       - infra-relay
+               topologyKey: kubernetes.io/hostname
+      containers:
+      - args:
+        - --log-level=3
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: RAFAY_RELAY_PEERSERVICE
+          valueFrom:
+            configMapKeyRef:
+              key: sentry.peering.host
+              name: infra-relay-configmap
+        - name: SENTRY_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: sentry.addr
+              name: infra-relay-configmap
+        image: {{.Values.infra_relay_image }}
+        imagePullPolicy: IfNotPresent
+        name: infra-relay
+        securityContext:
+          runAsUser: 0
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: infra-relay
+  name: infra-relay
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: infra-relay
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

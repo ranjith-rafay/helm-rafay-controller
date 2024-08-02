@@ -1,0 +1,28 @@
+apiVersion: v1
+appVersion: "2.5.0"
+description: A Helm chart for Rafay core
+name: rafaycore
+version: 2.5.0
+dependencies:
+- name: monitoring
+  version: 0.1.0
+  repository: "file://./charts/prometheus-operator"
+  condition: monitoring.enabled
+- name: karpenter-provisioner
+  version: 0.1.0
+  condition: karpenter-provisioner.enabled
+- name: alertmanager
+  version: 0.14.0
+  condition: alertmanager.enabled
+- name: rafay-repo
+  version: 0.1.0
+  condition: rafay-repo.enabled
+- name: prometheus-adapter
+  version: 0.1.0
+  condition: prometheus-adapter.enabled
+- name: prometheus-k8s-servicemesh
+  version: 0.1.0
+  condition: prometheus-k8s-servicemesh.enabled
+- name: prometheus-k8s-cost-metrics
+  version: 0.1.0
+  condition: prometheus-k8s-cost-metrics.enabled

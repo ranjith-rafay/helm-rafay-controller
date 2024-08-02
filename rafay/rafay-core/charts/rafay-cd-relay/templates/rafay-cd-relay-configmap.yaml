@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rafay-cd-relay-config
+data:
+  sentry.peering.host: "https://rafay-sentry:7001"
+  sentry.addr: "rafay-sentry:7000"

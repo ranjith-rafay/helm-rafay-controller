@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+   name: admin-partner-config
+data:
+  super_admin_user: {{ .Values.global.admin_user }}
+  default_partner_name: {{ .Values.global.partner_name }}
+  default_partner_product_name: {{ .Values.global.partner_product_name }}
+  default_partner_admin_user: {{ .Values.global.admin_user }}
+  #default_partner_console_host: "console.{{ .Values.global.default_partner_console_domain }}"
+  default_partner_console_host: "console.{{ .Values.global.default_partner_console_domain }}"
+  default_partner_opsconsole_host: "ops-console.{{ .Values.global.default_partner_console_domain }}"
+  default_partner_notification_email: {{ .Values.notification_email }}
+  default_partner_helpdesk_email: {{ .Values.helpdesk_email }}

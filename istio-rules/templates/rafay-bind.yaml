@@ -1,0 +1,48 @@
+{{- if eq .Values.global.enable_hosted_dns_server true }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rafay-bind
+spec:
+  type: NodePort
+  selector:
+    app: bind
+  ports:
+      # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - port: 53
+      targetPort: 53
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 30053
+      protocol: UDP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rafay-bind
+  labels:
+    app: bind
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bind
+  template:
+    metadata:
+      labels:
+        app: bind
+    spec:
+      containers:
+      - name: bind
+        image: {{ .Values.rafay_bind.image }}
+        env:
+        - name: DOCKER_LOGS
+          value: "1"
+        - name: ALLOW_QUERY
+          value: any
+        - name: WILDCARD_DNS
+          value: {{ .Values.global.default_partner_console_domain }}={{ .Values.global.controller_ip }}
+        ports:
+        - containerPort: 53
+{{- end}}

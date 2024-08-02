@@ -1,0 +1,38 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: copilot-service
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: copilot-service
+  template:
+    metadata:
+      labels:
+        app: copilot-service
+    spec:
+      containers:
+        - name: copilot-service
+          image: {{.Values.copilotsvc_image }}
+          {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+          resources:
+            limits:
+              cpu: {{ .Values.cpu_limits }}
+              memory: {{ .Values.memory_limits }}
+            requests:
+              cpu: {{ .Values.cpu_requests }}
+              memory: {{ .Values.memory_requests }}
+          {{- end }}
+          env:
+            - name: CONVERSATION_MANAGER_PORT
+              value: "50051"
+            - name: CONVERSATION_MANAGER_HOST
+              value: copilot-conversation-manager.rafay-core.svc.cluster.local
+            - name: DEPLOYMENT_ENV
+              value: {{ .Values.global.deployment_env }}
+          ports:
+            - containerPort: 50051  # The port on which your gRPC service is running
+      serviceAccount: copilot-service-sa
+      serviceAccountName: copilot-service-sa

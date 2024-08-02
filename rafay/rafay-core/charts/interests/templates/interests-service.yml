@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: interests
+spec:
+  ports:
+  - name: interest-rpc
+    port: 7000
+    protocol: TCP
+    targetPort: 7000
+  selector:
+    app: interests
+  type: ClusterIP

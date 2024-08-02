@@ -1,0 +1,7 @@
+prometheus_image: registry.rafay-edge.net/rafay/prometheus:v2.49.1
+prometheus_costmetrics_external_url: "https://prometheus-cost-metrics.rafay-edge.net"
+memory_requests: 100Mi
+cpu_requests: 50m
+memory_limits: 400Mi
+cpu_limits: 200m
+enabled: false

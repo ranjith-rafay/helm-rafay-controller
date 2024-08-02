@@ -1,0 +1,17 @@
+configConnectionPooler:
+  connection_pooler_default_cpu_request: 50m
+  connection_pooler_default_memory_request: 200Mi
+  connection_pooler_default_cpu_limit: "1"
+  connection_pooler_default_memory_limit: 500Mi   
+configPostgresPodResources:
+  default_cpu_limit: "1"
+  default_memory_limit: 500Mi  
+  default_cpu_request: 50m
+  default_memory_request: 200Mi
+resources:
+  limits:
+    cpu: 500m
+    memory: 500Mi
+  requests:
+    cpu: 50m
+    memory: 200Mi 

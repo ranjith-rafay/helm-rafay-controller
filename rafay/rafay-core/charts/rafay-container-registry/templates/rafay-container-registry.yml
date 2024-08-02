@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rafay-container-registry
+  labels:
+    app: rafay-container-registry
+spec:
+  type: ClusterIP
+  selector:
+    app: rafay-container-registry
+  ports:
+  - name: tcp-rcr
+    port: 6000
+    protocol: TCP
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: rafay-container-registry-pvc
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+ {{- if eq .Values.global.deployment_type "AIRGAP" }}
+ storageClassName: {{ .Values.global.storageClass }}
+ {{- else }}
+{{- if .Release.IsUpgrade }}
+ storageClassName: {{ (lookup "v1" "PersistentVolumeClaim" "rafay-core" "rafay-container-registry-pvc").spec.storageClassName }}
+{{ else }}
+ storageClassName: {{ .Values.global.storageClass }}
+{{ end }}
+{{- end }}
+ accessModes:
+  - ReadWriteOnce
+{{- else }}
+{{- if .Release.IsUpgrade }}
+ storageClassName: {{ (lookup "v1" "PersistentVolumeClaim" "rafay-core" "rafay-container-registry-pvc").spec.storageClassName }}
+{{ else }}
+ storageClassName: {{ .Values.global.storageClass }}
+{{ end }}
+ accessModes:
+  - ReadWriteOnce
+{{- end }}
+ resources:
+   requests:
+     storage: {{ .Values.rafay_container_registry_volume_size }}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: rafay-container-registry
+ labels:
+   app: rafay-container-registry
+spec:
+ replicas: 1
+ selector:
+   matchLabels:
+     app: rafay-container-registry
+ template:
+   metadata:
+     labels:
+       app: rafay-container-registry
+   spec:
+     containers:
+     - name: registry
+       image: {{ .Values.image }}
+       {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+       resources:
+         limits:
+           cpu: "{{ .Values.cpu_limits }}"
+           memory: "{{ .Values.memory_limits }}"
+         requests:
+           cpu: "{{ .Values.cpu_requests }}"
+           memory: "{{ .Values.memory_requests }}"
+       {{- end }}        
+       env:
+       - name: REGISTRY_HTTP_ADDR
+         value: :6000
+       - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+         value: /var/lib/registry
+       - name: REGISTRY_HTTP_SECRET
+         value: 30e23a87932b6e5251b5aa69f4d4f22174de464c40cc26ae282adf17941f2c71435a0679fabeb735eeefd3311828068d9c579acf334501da42098d891345e890
+       - name: REGISTRY_HTTP_TLS_CERTIFICATE
+         value: /certs/tls.crt
+       - name: REGISTRY_HTTP_TLS_KEY
+         value: /certs/tls.key
+       - name: REGISTRY_AUTH
+         value: token
+       - name: REGISTRY_AUTH_TOKEN_REALM
+         value: https://regauth.{{ .Values.global.default_partner_console_domain }}/auth
+       - name: REGISTRY_AUTH_TOKEN_SERVICE
+         value: Docker Registry
+       - name: REGISTRY_AUTH_TOKEN_ISSUER
+         value: Auth Service
+{{- if eq .Values.global.generate_self_signed_cert true }}
+       - name: REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE
+         value: /certs/token.crt
+{{- else }}
+       - name: REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE
+         value: /certs/tls.crt
+{{- end }}
+
+       - name: REGISTRY_STORAGE_DELETE_ENABLED
+         value: "true"
+       volumeMounts:
+       - name: image-store
+         mountPath: /var/lib/registry
+       - name: cert-dir
+         mountPath: /certs
+       ports:
+       - containerPort: 6000
+         name: registry
+         protocol: TCP
+     volumes:
+     - name: image-store
+       persistentVolumeClaim:
+         claimName: rafay-container-registry-pvc
+     - name: cert-dir
+       projected:
+         sources:
+         - secret:
+             items:
+             - key: tls.crt
+               path: tls.crt
+             - key: tls.key
+               path: tls.key
+             name: rafay-container-registry-tls-secret-opaque
+{{- if eq .Values.global.generate_self_signed_cert true }}
+         - secret:
+             items:
+             - key: tls.crt
+               path: token.crt
+             name: selfsigned-cert-tls-regauth 
+{{- end }}

@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rafay-relay
+  labels:
+    app: rafay-relay  
+spec:
+  ports:
+    - protocol: TCP
+      name: tcp-relay
+      port: 443
+      targetPort: 443
+    - protocol: TCP
+      name: http-relay-monitoring
+      port: 8003
+      targetPort: 8003
+  selector:
+    app: rafay-relay
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: rafay-relay
+spec:
+  mtls:
+    mode: PERMISSIVE
+  selector:
+    matchLabels:
+      app: rafay-relay
+---      
+apiVersion: v1
+kind: Service
+metadata:
+  name: rafay-relay-connector
+  namespace: rafay-core
+spec:
+{{- if (semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion) }}
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+{{- end }}
+  ports:
+  - name: tcp-relay
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: rafay-relay
+  sessionAffinity: None
+  type: ClusterIP

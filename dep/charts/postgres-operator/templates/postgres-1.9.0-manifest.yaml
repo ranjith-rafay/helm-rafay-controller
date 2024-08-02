@@ -1,0 +1,148 @@
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: postgres-admin
+  namespace: {{ .Values.namespace }}  
+  annotations:
+    "helm.sh/hook-weight": "5"
+spec:
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+  dockerImage: "{{ .Values.configGeneral.docker_image }}"
+  teamId: "postgres"
+  {{- if eq .Values.global.ha_enabled true }}
+  numberOfInstances: 3
+  {{- else }}
+  numberOfInstances: 2
+  {{- end }}  
+  users:  # Application/Robot users
+    zalando:
+    - superuser
+    - createdb
+    admindbuser: []
+    edgedbuser: []
+    configv2dbuser: []
+    eventsdbuser: []
+    pipelinedbuser: []  
+    clusterdbuser: []
+    keygendbuser: []
+    infradbuser: []
+    infraprovisionerdbuser: []
+    saltdbuser: []
+    clustertemplatedbuser: []
+    interestsdbuser: []
+    approvalsdbuser: []
+    eaasdbuser: []
+    capabilitydbuser: []    
+    fleetsrvdbuser: []
+    aidbuser: []
+    hubdbuser: []
+  enableMasterLoadBalancer: false
+  enableReplicaLoadBalancer: false
+  enableConnectionPooler: true # enable/disable connection pooler deployment
+  enableReplicaConnectionPooler: true # set to enable connectionPooler for replica service
+  allowedSourceRanges:  # load balancers' source ranges for both master and replica services
+  - 127.0.0.1/32
+  databases:
+    foo: zalando
+    admindb: admindbuser
+    edgedb: edgedbuser
+    configv2db: configv2dbuser
+    eventsdb: eventsdbuser
+    pipelinedb: pipelinedbuser
+    clusterdb: clusterdbuser
+    keygensvc: keygendbuser
+    infradb: infradbuser
+    infraprovisionerdb: infraprovisionerdbuser
+    saltdb: saltdbuser
+    clustertemplatedb: clustertemplatedbuser
+    interestsdb: interestsdbuser
+    approvalsdb: approvalsdbuser
+    eaasdb: eaasdbuser
+    capabilitydb: capabilitydbuser
+    fleetsrvdb: fleetsrvdbuser
+    aidb: aidbuser
+    hubdb: hubdbuser
+  preparedDatabases:  #preparedDatabases here it is used to install pg_trgm extension in configv2db database
+    configv2db:
+      extensions:
+        pg_trgm: public
+      schemas:
+        public:
+          defaultUsers: true    
+    pipelinedb:
+      extensions:
+        pg_trgm: public
+      schemas:
+        public:
+          defaultUsers: true    
+    capabilitydb:
+      extensions:
+        pg_trgm: public
+      schemas:
+        public:
+          defaultUsers: true            
+  postgresql:
+    version: "13"
+    parameters:  # Expert section
+      shared_buffers: "32MB"
+     {{- if eq .Values.global.ha_enabled true }}
+      max_connections: "254"
+     {{- else }}
+      max_connections: "128"
+     {{- end }}
+      log_statement: "all"
+  volume:
+    size: 50Gi
+    {{- if eq .Values.global.deployment_type "AIRGAP" }}
+    storageClass: openebs-hostpath
+    {{- end }}
+  additionalVolumes:
+    - name: empty
+      mountPath: /opt/empty
+      targetContainers:
+        - all
+      volumeSource:
+        emptyDir: {}
+  enableShmVolume: true
+  resources:
+    {{- if eq .Values.global.ha_enabled true }}
+    requests:
+      cpu: 1000m
+      memory: 4000Mi
+    limits:
+      cpu: 2000m
+      memory: 8000Mi
+    {{- else }}
+    requests:
+      cpu: 500m
+      memory: 2000Mi
+    limits:
+      cpu: 1000m
+      memory: 4000Mi
+    {{- end }}
+  patroni:
+    initdb:
+      encoding: "UTF8"
+      locale: "en_US.UTF-8"
+      data-checksums: "true"
+    pg_hba:
+      - hostssl all all 0.0.0.0/0 md5
+      - host    all all 0.0.0.0/0 md5
+      - local   all             all                                   trust
+      - hostssl all             +zalandos    127.0.0.1/32       pam
+      - host    all             all                127.0.0.1/32       md5
+      - hostssl all             +zalandos    ::1/128            pam
+      - host    all             all                ::1/128            md5
+      - hostssl replication     standby all                md5
+      - hostnossl all           all                all                reject
+      - hostssl all             +zalandos    all                pam
+      - hostssl all             all                all                md5
+    ttl: 30
+    loop_wait: &loop_wait 10
+    retry_timeout: 10
+    synchronous_mode: false
+    synchronous_mode_strict: false
+    maximum_lag_on_failover: 33554432
+
+

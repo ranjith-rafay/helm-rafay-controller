@@ -1,0 +1,245 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: infra-salt-orchestrator
+  name: infra-salt-orchestrator
+spec:
+  podManagementPolicy: OrderedReady
+  {{- if eq .Values.global.ha_enabled true }}
+  replicas: 1
+  {{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+  {{- end }}
+  serviceName: infra-salt-orchestrator-ext
+  selector:
+    matchLabels:
+      app: infra-salt-orchestrator
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+        sidecar.istio.io/proxyCPU: 50m
+        sidecar.istio.io/proxyMemory: 256Mi
+      labels:
+        app: infra-salt-orchestrator
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+      - command:
+        - /usr/bin/supervisord
+        env:
+        - name: SALT_MASTER_PRODUCTION
+          value: "false"
+        - name: SALT_MASTER_CERT_FOLDER
+          value: /opt/rcloud/certs
+        - name: SALT_MASTER_LOG_LEVEL
+          value: info
+        - name: SALT_API_LOG_LEVEL
+          value: info
+        image: {{.Values.salt_master_image }}
+        imagePullPolicy: IfNotPresent
+        name: salt-master
+        ports:
+        - containerPort: 4505
+          protocol: TCP
+        - containerPort: 4506
+          protocol: TCP
+        - containerPort: 8000
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /opt/rcloud/certs
+          name: certs
+        - mountPath: /etc/salt
+          name: saltmaster-conf-volume
+        - mountPath: /etc/salt/pki
+          name: saltmaster-etc-salt-pki-volume
+        - mountPath: /var/cache/salt
+          name: saltmaster-var-cache-salt-volume
+        - mountPath: /srv/salt
+          name: saltmaster-srv-salt-volume
+        - mountPath: /var/run/salt/master
+          name: saltmaster-var-run-salt-volume
+      - args:
+        - server
+        - -v
+        - --port
+        - "443"
+        - https://istio-ingressgateway.istio-system.svc.cluster.local
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          value: rafay-core
+        image: {{ .Values.chisel_image }}
+        imagePullPolicy: IfNotPresent
+        name: chisel-server
+        ports:
+        - containerPort: 443
+          name: https
+          protocol: TCP
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: {{ .Values.cpu_limits }}
+            memory: {{ .Values.memory_limits }}
+          requests:
+            cpu: {{ .Values.cpu_requests }}
+            memory: {{ .Values.memory_requests }}
+        {{- end }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - env:
+        - name: SALT_EVENTS_PRODUCTION
+          value: "false"
+        - name: SALT_EVENTS_LOG_LEVEL
+          value: info
+        - name: KAFKA_BROKERS
+          value: kafka-core:9092
+        image: {{.Values.salt_event_producer_image }}
+        imagePullPolicy: IfNotPresent
+        name: salt-event-producer
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: {{ .Values.cpu_limits }}
+            memory: {{ .Values.memory_limits }}
+          requests:
+            cpu: {{ .Values.cpu_requests }}
+            memory: {{ .Values.memory_requests }}
+        {{- end }}
+        volumeMounts:
+        - mountPath: /etc/salt
+          name: saltmaster-conf-volume
+        - mountPath: /var/run/salt/master
+          name: saltmaster-var-run-salt-volume
+      dnsPolicy: ClusterFirst
+      hostAliases:
+      - hostnames:
+        - infra-salt-orchestrator-ext.rafay-core.svc.cluster.local
+        - infra-salt-orchestrator.rafay-core.svc.cluster.local
+        - salt-master.rafay-core.svc.cluster.local
+        ip: 127.0.0.1
+      imagePullSecrets:
+      - name: regcred
+      restartPolicy: Always
+      tolerations:
+      - key: salt-reserved
+        operator: Equal
+        value: "true"
+      initContainers:
+      - name: wait-for-assets
+        image: {{ .Values.global.busybox_image }}
+        command: ['sh', '-c', 'echo Sleeping for the assests to come up !!! && sleep 60']
+      - env:
+        - name: TARGET_STATES_URL
+          value: {{ .Values.global.secrets.infra_states_s3_url | quote }}
+        - name: LOCAL_REPO
+          value: "TRUE"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: aws.access.key.id
+              name: infra-salt-orchestrator-sync-secrets
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: aws.secret.access.key
+              name: infra-salt-orchestrator-sync-secrets
+        image: {{ .Values.global.secrets.infra_states_sync_image }}
+        imagePullPolicy: IfNotPresent
+        name: infra-states-sync
+        volumeMounts:
+        - mountPath: /srv/salt
+          name: saltmaster-srv-salt-volume
+      - command:
+        - sh
+        - -c
+        - cp /tmp/master-tpl /etc/salt/master && sed -i "s/\"mypass\"/\"${EDGE_DB_PASSWORD}\"/g" /etc/salt/master
+        env:
+        {{- if .Values.global.is_external_database }}
+        - name: EDGE_DB_PASSWORD
+          valueFrom:
+             secretKeyRef:
+               key: password
+               name: edgedb-db-secret
+        {{- else }}
+        - name: EDGE_DB_PASSWORD
+          valueFrom:
+             secretKeyRef:
+               key: password
+               name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+        image: {{ .Values.alpine_image }}
+        imagePullPolicy: IfNotPresent
+        name: infra-salt-orchestrator-config
+        volumeMounts:
+        - mountPath: /tmp
+          name: saltmaster-conf-tpl-volume
+        - mountPath: /etc/salt
+          name: saltmaster-conf-volume
+      restartPolicy: Always
+      volumes:
+      - name: saltmaster-etc-salt-pki-volume
+        persistentVolumeClaim:
+          claimName: saltmaster-etc-salt-pki
+      - name: saltmaster-var-cache-salt-volume
+        persistentVolumeClaim:
+          claimName: saltmaster-var-cache-salt
+      - name: saltmaster-srv-salt-volume
+        persistentVolumeClaim:
+          claimName: saltmaster-srv-salt
+      - name: saltmaster-var-run-salt-volume
+        persistentVolumeClaim:
+          claimName: saltmaster-var-run-salt
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: master
+            path: master-tpl
+          name: infrasaltorchestrator-conf
+        name: saltmaster-conf-tpl-volume
+      - name: saltmaster-conf-volume
+        persistentVolumeClaim:
+          claimName: saltmaster-conf-volume
+      - name: certs
+        projected:
+          sources:
+          - secret:
+              items:
+              - key: tls.crt
+                path: server.crt
+              - key: tls.key
+                path: server.key
+              name: selfsigned-infra-salt-orchestrator-cert-tls
+          - secret:
+              items:
+              - key: tls.crt
+                path: ca.crt
+              name: infra-salt-orchestrator-ca-tls
+  volumeClaimTemplates:
+  - metadata:
+      name: saltmaster-var-cache-salt-volume
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: {{ .Values.global.storageClass }}
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+  - metadata:
+      name: saltmaster-var-run-salt-volume
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: {{ .Values.global.storageClass }}
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem

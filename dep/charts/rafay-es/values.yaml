@@ -1,0 +1,13 @@
+# Default values for rafay-es.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+version: 8.5.1 
+replicas: 1
+image: registry.rafay-edge.net/elasticsearch/elasticsearch:8.12.1
+kibana_image: registry.rafay-edge.net/kibana/kibana:8.12.1 
+persistance:
+   storageClass: ''
+   size: 10Gi
+   
+   

@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cryptosvc-selfsigned-cert
+spec:
+  dnsNames:
+    - cryptosvc.core.{{ .Values.global.default_partner_console_domain }}
+  secretName: selfsigned-cert-tls-cryptosvc
+  duration: 87600h
+  renewBefore: 12h
+  issuerRef:
+    name: self-signed-infar-ca-issuer 

@@ -1,0 +1,213 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: infra-provisioner-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: infra-provisioner-role
+rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    - endpoints
+    verbs:
+    - '*'
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: infra-provisioner-rb
+subjects:
+- kind: ServiceAccount
+  name: infra-provisioner-sa
+  namespace: rafay-core
+roleRef:
+  kind: Role
+  name: infra-provisioner-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: infra-provisioner
+  name: infra-provisioner
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: infra-provisioner
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+      labels:
+        app: infra-provisioner
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - infra-provisioner
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: RPC_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: rpcPort
+              name: infra-provisioner-configmap
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: apiPort
+              name: infra-provisioner-configmap
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: dbName
+              name: infra-provisioner-configmap
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              key: dbUser
+              name: infra-provisioner-configmap
+        - name: DB_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: dbAddr
+              name: infra-provisioner-configmap
+        {{- if .Values.global.is_external_database }}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: infraprovisionerdb-db-secret
+        {{- else }}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: infraprovisionerdbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+        - name: CONFIG_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: infra-provisioner-configmap
+              key: configAddr
+        - name: DEV
+          valueFrom:
+            configMapKeyRef:
+              key: dev
+              name: infra-provisioner-configmap
+        - name: AUTH_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: authAddr
+              name: infra-provisioner-configmap
+        - name: SENTRY_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: sentry.addr
+              name: infra-provisioner-configmap
+        - name: CRYPTO_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: crypto.addr
+              name: infra-provisioner-configmap
+        - name: CORE_CD_AGENT_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: cdagent.core.addr
+              name: infra-provisioner-configmap
+        - name: CD_RELAY_USER_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: cdrelay.user.host
+              name: infra-provisioner-configmap
+        - name: PIPELINE_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: pipeline.addr
+              name: infra-provisioner-configmap
+        - name: INTERNAL_TRIGGER_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: internal.trigger.endpoint
+              name: infra-provisioner-configmap
+       {{- if .Values.global.ssl_mode }}
+        - name: PGSSLMODE
+          value: {{ default "" .Values.global.ssl_mode }}
+       {{- end }}
+        image: "{{ .Values.infra_provisioner_image }}"
+        name: infra-provisioner
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+      serviceAccount: infra-provisioner-sa
+      hostname: infra-provisioner
+      imagePullSecrets:
+      - name: regcred
+      restartPolicy: Always
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: infra-provisioner
+  name: infra-provisioner
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: infra-provisioner
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

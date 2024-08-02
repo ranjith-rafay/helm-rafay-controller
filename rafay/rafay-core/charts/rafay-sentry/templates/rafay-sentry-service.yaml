@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rafay-sentry
+  labels:
+    app: rafay-sentry  
+spec:
+  ports:
+    - protocol: TCP
+      name: grpc-port
+      port: 7000
+      targetPort: 7000
+    - protocol: TCP
+      name: http-port
+      port: 8000
+      targetPort: 8000
+    - protocol: TCP
+      name: tcp-peering-port
+      port: 7001
+      targetPort: 7001
+    - name: http-sentry-monitoring
+      port: 8003
+      protocol: TCP
+      targetPort: 8003      
+  selector:
+    app: rafay-sentry
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: rafay-sentry
+spec:
+  mtls:
+    mode: PERMISSIVE
+  selector:
+    matchLabels:
+      app: rafay-sentry

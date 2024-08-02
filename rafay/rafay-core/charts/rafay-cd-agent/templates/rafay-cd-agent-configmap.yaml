@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rafay-cd-agent-configmap
+data:
+  sentry.bootstrap.addr: rafay-sentry:7000

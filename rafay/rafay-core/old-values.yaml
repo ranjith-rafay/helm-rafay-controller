@@ -1,0 +1,10 @@
+global:
+  ha_enabled: true
+  default_partner_console_domain: ranjith.dev.rafay-edge.net
+  size: "M"
+  generate_self_signed_cert: true
+  partner_product_name: Ranjith July
+  partner_name: Ranjith July 
+  partner_logo_url: ""             # Display logo in UI, Default picks rafay logo
+  admin_user: "ranjith@rafay.co"
+  admin_password: change123

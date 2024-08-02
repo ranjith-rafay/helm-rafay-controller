@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rafay-relay-config
+data:
+  sentry.peering.host: "https://rafay-sentry:7001"
+  sentry.addr: "rafay-sentry:7000"
+  audit.path: "/opt/rafay/audit"
+  limitConnections: "true"
+  maxConnections: "5000"	
+  maxConnectionsPerCluster: "20"
+  relayPeerLookupTimeout: "5s"
+  relayPeerBreakerTripMaxConsecutiveFailures: "100000"
+  relayPeerBreakerTripMaxHalfOpenRequests: "100000"
+  relayPeerBreakerTripClearInterval: "1m"
+  relayPeerBreakerTripTimeout: "1m"
+  relayUserPerSniRequestLimit: "100"
+  relayUserPerSniWindowLength: "1s"

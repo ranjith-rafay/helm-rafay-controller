@@ -1,0 +1,13 @@
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: edge-broker-0
+spec:
+  hosts:
+  - edge-broker-0.edge-broker.rafay-core.svc.cluster.local
+  location: MESH_INTERNAL
+  ports:
+  - name: grpc-internal
+    number: 5449
+    protocol: TCP

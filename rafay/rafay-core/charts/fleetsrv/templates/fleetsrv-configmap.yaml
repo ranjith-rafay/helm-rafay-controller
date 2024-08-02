@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fleetsrv-config
+  namespace: rafay-core
+data:
+  rpcPort: "7000"
+  dbAddr: "postgres:5432"
+  dbName: "fleetsrvdb"
+  dbUser: "fleetsrvdbuser"
+  secretPath: "/etc/secret"
+  dev: "false"

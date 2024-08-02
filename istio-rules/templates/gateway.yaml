@@ -1,0 +1,454 @@
+{{- if eq .Values.global.generate_self_signed_cert true }}
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: admin-ingress-gw
+spec:
+  selector:
+    istio: ingressgateway # use istsio default ingress gateway
+  servers:
+  - hosts:
+    - 'console.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-console
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-console
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-console"
+       maxProtocolVersion: TLSV1_3
+       minProtocolVersion: TLSV1_2
+{{- end }}
+  - hosts:
+    - 'ops-console.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-ops-console
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-ops-console
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-ops-console"
+{{- end }}
+  - hosts:
+    - 'api.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-api
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-api
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-api"
+{{- end }}
+  - hosts:
+    - 'fluentd-aggr.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-fluentd
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-fluentd
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-fluentd-aggr"
+{{- end }}
+  - hosts:
+    - 'prometheus.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-prometheus
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-prometheus
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-prometheus"
+{{- end }}
+  - hosts:
+    - 'kiali.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-kiali
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-kiali
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-kiali"
+{{- end }}
+  - hosts:
+    - 'tracing.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-jaeger
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-jaeger
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-jaeger"
+{{- end }}
+  - hosts:
+    - 'grafana.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-grafana
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-grafana
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-grafana"
+{{- end }}
+  - hosts:
+    - 'kibana.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-kibana
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-kibana
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-kibana"
+{{- end }}
+  - hosts:
+    - 'repo.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-repo
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-repo
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-repo"
+{{- end }}
+  - hosts:
+    - 'registry.{{.Values.global.default_partner_console_domain}}'
+    port:
+{{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-registry
+      protocol: HTTP
+{{- else }}
+      number: 443
+      name: https-ingress-registry
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-registry"
+{{- end }}
+  - hosts:
+    - '*.{{.Values.global.default_partner_console_domain}}'
+    port:
+      number: 80
+      name: http-ingress
+      protocol: HTTP
+    tls:
+      httpsRedirect: true
+  {{- if .Values.global.external_metrics.enabled }}      
+  - hosts:
+    - 'rafay-prometheus.{{.Values.global.default_partner_console_domain}}'
+    port:
+    {{- if eq .Values.global.external_lb true }}
+      number: 8081
+      name: http-ingress-rafay-prometheus
+      protocol: HTTP
+    {{- else }}
+      number: 443
+      name: https-ingress-rafay-prometheus
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "selfsigned-cert-tls-rafay-prometheus"
+    {{- end }}   
+  {{- end }} 
+{{- else }}
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: admin-ingress-gw
+spec:
+  selector:
+    istio: ingressgateway # use istsio default ingress gateway
+  servers:
+  - hosts:
+    - '*.{{.Values.global.default_partner_console_domain}}'
+    port:
+      number: 443
+      name: https-ingress
+      protocol: HTTPS
+    tls:
+       mode: SIMPLE
+       credentialName: "admin-ingress-certs"
+       maxProtocolVersion: TLSV1_3
+       minProtocolVersion: TLSV1_2
+  - hosts:
+    - '*.{{.Values.global.default_partner_console_domain}}'
+    port:
+      number: 80
+      name: http-ingress
+      protocol: HTTP
+    tls:
+      httpsRedirect: true
+      maxProtocolVersion: TLSV1_3
+      minProtocolVersion: TLSV1_2
+{{- end }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: nexus-ingress-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - 'salt.core.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-nexus
+      number: 443
+      protocol: HTTPS
+    tls:
+      credentialName: selfsigned-infra-salt-orchestrator-cert-tls
+      mode: SIMPLE
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: rcr-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - 'rcr.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-rcr
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: regauth-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - 'regauth.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-regauth
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: edgecomm-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.core.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-edgecomm
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: core-connector-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.core-connector.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-core-connector
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: user-relay-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.user.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-user-relay
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: user-relay-kubeapi-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.user.kubeapi-proxy.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-user-kctlproxy
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: core-connector-kubeapi-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.connector.kubeapi-proxy.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-connector-kctlproxy
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: core-connector-cdrelay-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.connector.cdrelay.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-core-connector-cdrelay
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: user-cdrelay-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.user.cdrelay.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-user-cdrelay
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: peering-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - 'peering.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-user-peering
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: core-connector-infrarelay-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.connector.infrarelay.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-core-connector
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: user-infrarelay-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*.user.infrarelay.{{.Values.global.default_partner_console_domain}}'
+    port:
+      name: https-user-relay
+      number: 443
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH

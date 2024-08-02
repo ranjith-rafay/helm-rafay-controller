@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: engine-api-cm
+  namespace: rafay-core
+data:
+  engine.enable_api: "true"
+  engine.engine_api.redis_addr: "{{ .Values.global.redis_endpoint  }}.rafay-core.svc.cluster.local:6379"
+  helpers.addr: "rafay-workflow-helpers:8000"
+  engine.engine_api.db_host: postgres-admin
+  engine.engine_api.db_user: pipelinedbuser
+  engine.engine_api.db_name: pipelinedb
+  engine.engine_api.enable_e2e: "true"
+  engine.engine_api.blob_provider: {{ .Values.global.engine_api_blob_provider }} 
+  engine.enable_api.blob_s3_bucket: {{ .Values.global.engine_api_blob_bucket }}
+  aws.region: {{ .Values.global.engine_api_region }}
+  {{- if eq .Values.global.isCustomRegistry true}} 
+  registry.fqdn: "ops-console.{{ .Values.global.default_partner_console_domain }}/rafay"
+  {{- else }} 
+  registry.fqdn: "ops-console.{{ .Values.global.default_partner_console_domain }}"
+  {{- end }}
+  artifact.driver.image: rafay/{{ (splitList "/" .Values.global.artifact_driver_image) | last }} 
+  tf.driver.image: rafay/{{ (splitList "/" .Values.global.tf_driver_image) | last }}
+  engine.engine_api_workflow_run_outbox_poll_tick_rate: "10s"
+  engine.engine_api_trigger_event_poll_tick_rate: "10s"
+  engine.engine_api_workflow_run_overflow_copy_poll_tick_rate: "10s"

@@ -1,0 +1,94 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "upload-agent-config.fullname" . }}-file
+  labels:
+    {{- include "upload-agent-config.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "upload-agent-config.labels" . | nindent 8 }}
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      initContainers:
+      - name: init-nexus-service
+        image: {{ .Values.initContainerImage }}
+        {{- if eq .Values.global.isCustomRegistry true}} 
+        command: ["sh", "-c", "until nslookup nexus-service.rafay-registry.svc.cluster.local; do echo waiting for nexus-service; sleep 2; done;"]
+        {{- else }}
+        command: ["sh", "-c", "until nslookup nexus-service.rafay-core.svc.cluster.local; do echo waiting for nexus-service; sleep 2; done;"]
+        {{- end }}        
+      - name: init-postgres-service
+        image: {{ .Values.initContainerImage }}
+        command: ["sh", "-c", "until nslookup postgres-admin.rafay-core.svc.cluster.local; do echo waiting for postgres-admin; sleep 2; done;"]
+      containers:
+      - name: upload-agent-config
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}    
+        image: "{{ .Values.image.repository }}"
+        command: ["python", "upload-agent-config.py"]
+        env: 
+        {{- if .Values.global.is_external_database }}  
+        - name: ADMIN_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: admindb-db-secret
+        {{- else }} 
+        - name: ADMIN_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: admindbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end}}
+        {{- if eq .Values.global.deployment_type "AKS" }}  
+        - name: SSLMODE
+          value: {{ .Values.global.ssl_mode }}  
+        {{- end}}
+        - name: ADMIN_DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: admin.db.user
+              name: adminsrv-secrets                     
+        - name: ADMIN_DB_NAME
+          value: admindb     
+        - name: ADMIN_DB_HOST
+          value: postgres-admin.rafay-core.svc.cluster.local
+        - name: ADMIN_DB_PORT
+          value: "5432"
+        - name: REGISTRY_FQDN
+          value: "{{ .Values.global.default_partner_console_domain }}"
+        - name: REPOSITORY
+          value: "eks-bootstrap"          
+        - name: FILENAME
+          value: "agent-config"  
+        - name: FOLDER
+          value: "v1"  
+        - name: NEXUS_USER
+          valueFrom:
+            secretKeyRef:
+              key: registry_user
+              name: {{.Chart.Name}}-secrets 
+        - name: NEXUS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: registry_password
+              name: {{.Chart.Name}}-secrets
+        {{- if eq .Values.global.isCustomRegistry true}} 
+        - name: REGISTRY_SVC
+          value: "nexus-service.rafay-registry.svc.cluster.local:8081" 
+        {{- else }}
+        - name: REGISTRY_SVC
+          value: "nexus-service.rafay-core.svc.cluster.local:8081" 
+        {{- end }}              
+                                                  
+      restartPolicy: OnFailure

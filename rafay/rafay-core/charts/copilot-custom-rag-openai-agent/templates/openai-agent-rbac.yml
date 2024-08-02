@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: copilot-custom-rag-openai-agent-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: copilot-custom-rag-openai-agent-role
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["*"]
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: copilot-custom-rag-openai-agent-rb
+subjects:
+  - kind: ServiceAccount
+    name: copilot-custom-rag-openai-agent-sa
+roleRef:
+  kind: Role
+  name: copilot-custom-rag-openai-agent-role
+  apiGroup: rbac.authorization.k8s.io

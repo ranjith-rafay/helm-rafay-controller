@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: copilot-custom-rag-openai-agent
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: copilot-custom-rag-openai-agent
+  template:
+    metadata:
+      labels:
+        app: copilot-custom-rag-openai-agent
+    spec:
+      containers:
+        - name: copilot-custom-rag-openai-agent
+          image: {{.Values.copilot_custom_rag_openai_agent_image }}
+          {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+          resources:
+            limits:
+              cpu: {{ .Values.cpu_limits }}
+              memory: {{ .Values.memory_limits }}
+            requests:
+              cpu: {{ .Values.cpu_requests }}
+              memory: {{ .Values.memory_requests }}
+          {{- end }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+          ports:
+            - containerPort: 8080
+          env:
+            - name: VECTOR_STORE_TYPE
+              value: "qdrant"
+            - name: VECTOR_STORE_HOST
+              value: "rafay-qdrant.rafay-core.svc.cluster.local"
+            - name: VECTOR_STORE_PORT
+              value: "6333"
+            - name: VECTOR_STORE_COLLECTION
+              value: "rafay-collection"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: openai.api.key
+                  name: {{.Chart.Name}}-secrets
+            - name: LANGCHAIN_DEBUG
+              value: "false"
+            - name: DEPLOYMENT_ENV
+              value: {{ .Values.global.deployment_env }}
+            - name: TESTBED_NAME
+              value: {{ .Values.global.testbed_name }}
+            - name: LLM_MODEL
+              value: "openai/gpt-3.5-turbo-0125"
+            - name: EMBEDDINGS_TYPE
+              value: "openai/text-embedding-ada-002"
+      serviceAccount: copilot-custom-rag-openai-agent-sa
+      serviceAccountName: copilot-custom-rag-openai-agent-sa
+      volumes:
+      - name: config-volume
+        configMap:
+          name: copilot-custom-rag-openai-agent-prompts
+          items:
+          - key: copilot-prompts-config.yaml
+            path: copilot-prompts-config.yaml

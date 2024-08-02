@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rafay-prompt-config
+data:
+  sentry.addr: "rafay-sentry:7000"
+  dev: "false"
+  api.port: "8000"
+  authaddr: "authsrv:50011"
+  enablePprof: "true"

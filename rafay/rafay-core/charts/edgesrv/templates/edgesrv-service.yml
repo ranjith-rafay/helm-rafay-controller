@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edgesrv
+  labels:
+    app: edgesrv
+spec:
+  ports:
+    - protocol: TCP
+      name: grpc
+      port: 50701
+      targetPort: 50701
+    - protocol: TCP
+      name: http-edge
+      port: 8000
+      targetPort: 8000
+  selector:
+    app: edgesrv

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: engine-worker-cm
+  namespace: rafay-core
+data:
+  engine.enable_worker: "true"
+  engine.engine_worker.redis_addr: "{{ .Values.global.redis_endpoint  }}.rafay-core.svc.cluster.local:6379"
+  helpers.addr: "rafay-workflow-helpers:8000"
+  engine.engine_worker.engine_api_rpc_addr: "engine-api:5001"

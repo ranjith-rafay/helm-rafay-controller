@@ -1,0 +1,488 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: edgesrv-role
+rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    - endpoints
+    verbs:
+    - '*'
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: edgesrv-rb
+subjects:
+- kind: ServiceAccount
+  name: edgesrv-sa
+  namespace: rafay-core
+roleRef:
+  kind: Role
+  name: edgesrv-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: edgesrv
+  name: edgesrv
+spec:
+  {{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+  {{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: edgesrv
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: edgesrv
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - edgesrv
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+      - name: migrations
+        image: {{ .Values.edgedb_migrations_image }}
+        env:
+        {{- if .Values.global.ssl_mode }}
+          - name: PGSSLMODE
+            value: {{ default "" .Values.global.ssl_mode }}
+        {{- end }} 
+          - name: IS_SELF_HOSTED
+            value: "true"
+          - name: IS_SELF_SIGNED
+            value: "true"
+          - name: PG_HOST
+            value: postgres-admin
+          - name: PG_PORT
+            value: "5432"
+          - name: PG_DATABASE
+            value: edgedb
+          - name: REDIS_ADDR
+            value: "{{ .Values.global.redis_endpoint }}:6379"
+          - name: EDGE_CNAME_SUFFIX
+            value: {{.Values.global.testbed_name}}.edges.run.dev.rafay-edge.net
+          - name: CATALOG_LABELS_ENABLED
+            value: "rafay-core-dev,kube-system-dev"
+          - name: UPFLAG
+            value: "true"
+          - name: PG_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: edge.db.user
+                name: edgesrv-secrets
+          {{- if .Values.global.is_external_database }}
+          - name: PG_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: edgedb-db-secret
+          {{- else }}
+          - name: PG_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+          {{- end }}
+          {{- if .Values.global.proxy.ip }}
+          - name: https_proxy
+            value: {{ .Values.global.proxy.ip }}:{{ .Values.global.proxy.port }}
+          {{- end }}    
+          {{- if and .Values.global.proxy.ip .Values.global.proxy.noproxy }}  
+          - name: no_proxy
+            value: localhost,10.96.0.0/12,10.224.0.0.0/16,.svc.cluster.local,authsrv,cryptosvc,edge-factory,rafay-sentry,edge-sec,config-processor,keygensvc,rafay-config,{{.Values.global.proxy.noproxy }}
+          {{- else if .Values.global.proxy.ip }}
+          - name: no_proxy
+            value: localhost,10.96.0.0/12,10.224.0.0.0/16,.svc.cluster.local,authsrv,cryptosvc,edge-factory,rafay-sentry,edge-sec,config-processor,keygensvc,rafay-config
+          {{- end }}                
+      containers:
+      - env:
+        - name: IS_SELF_SIGNED
+          value: "true"
+        - name: INF_HOST
+          value: infra-apiserver.rafay-core.svc.cluster.local       
+        - name: INF_PORT
+          value: "7000"
+        - name: IS_SELF_HOSTED
+          value: "true"
+        - name: EDGE_SERVICE_SERVER_PORT
+          value: "50701"
+        - name: PG_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: edge.db.user
+              name: edgesrv-secrets
+        {{- if .Values.global.is_external_database }}
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedb-db-secret
+        {{- else }}
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+        - name: PG_DATABASE
+          value: edgedb
+        - name: REDIS_ADDR
+          value: "{{ .Values.global.redis_endpoint }}:6379"
+        - name: KAFKA_BROKERS
+          value: kafka-core:9092
+        - name: SEND_GRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: sendgrid.apikey
+              name: edgesrv-secrets
+        - name: TWILIO_SID
+          valueFrom:
+            secretKeyRef:
+              key: twilio.sid
+              name: edgesrv-secrets
+        - name: TWILIO_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: twilio.authtoken
+              name: edgesrv-secrets
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: edgesrv-secrets
+              key: aws.access.key.id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: edgesrv-secrets
+              key: aws.secret.access.key
+        - name: INFLUX_PWD
+          valueFrom:
+            secretKeyRef:
+              key: influx-pwd
+              name: edgesrv-secrets
+        {{- if .Values.amp_enabled }}
+        - name: INFLUX_CONN_URL
+          value: {{ printf "http://localhost:8005/workspaces/%s/api/v1/remote_write" .Values.global.monitoring.integrations.amp.workspaceId | quote}} 
+        {{- else }}
+        - name: INFLUX_CONN_URL
+          value: "http://promscale-connector:9201/write" 
+        {{- end}}
+        - name: OPSGENIE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: opsgenie-api-key
+              name: edgesrv-secrets
+        - name: LOGMON_AWS_ACCESS_KEYID
+          valueFrom:
+            secretKeyRef:
+              key: logmon-aws-access-keyid
+              name: edgesrv-secrets
+        - name: LOGMON_AWS_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: logmon-aws-secret-key
+              name: edgesrv-secrets
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: PG_HOST
+          value: postgres-admin
+        - name: PG_PORT
+          value: "5432"
+        - name: CONFIG_PROCESSOR_ENDPOINT
+          value: "config-processor:50555"
+        - name: AUTHSRV_ENDPOINT
+          value: "authsrv:50011"
+        - name: TS_HOST
+          value: traffic-steering
+        - name: TS_PORT
+          value: "50001"
+        - name: WORKLOAD_PLACEMENT_HOST
+          value: workload-placement
+        - name: WORKLOAD_PLACEMENT_PORT
+          value: "50001"
+        - name: WORKLOAD_PROCESSOR_HOST
+          value: workload-processor
+        - name: WORKLOAD_PROCESSOR_PORT
+          value: "50001"
+        - name: WORKLOAD_PROCESSOR_ENDPOINT
+          value: workload-processor:50001
+        - name: KEYGEN_GRPC_HOST
+          value: keygensvc
+        - name: KEYGEN_GRPC_PORT
+          value: "50505"
+        - name: CRYPTO_GRPC_HOST
+          value: cryptosvc
+        - name: CRYPTO_GRPC_PORT
+          value: "50505"
+        - name: EDGE_SEC_HOST
+          value: edge-sec
+        - name: EDGE_SEC_PORT
+          value: "50003"
+        - name: EDGE_FACTORY_HOST
+          value: edge-factory
+        - name: EDGE_FACTORY_PORT
+          value: "50004"
+        - name: CERT_PATH
+          value: /opt/certs
+        - name: INFRA_CA_PATH
+          value: /opt/infra-certs/infra_ca.crt
+        - name: KMIWRAP_KEY_PATH
+          value: /opt/infra-certs/kmiwrap.key
+        - name: CLUSTER_SCHEDULER_HOST
+          value: scheduler.rafay-core.svc.cluster.local
+        - name: CLUSTER_SCHEDULER_PORT
+          value: "5000"
+        - name: RAFAY_CONFIG_HOST
+          value: rafay-config
+        - name: RAFAY_CONFIG_PORT
+          value: "7000"
+        - name: EDGE_SUFFIX
+          value: {{ .Values.global.edge_suffix }}
+        - name: EDGE_CNAME_SUFFIX
+          value: {{.Values.global.testbed_name}}.edges.run.dev.rafay-edge.net
+        - name: SALT_MASTER_ADV_HOST
+          value: salt.core.{{.Values.global.default_partner_console_domain}}
+        - name: DEFAULT_PARTNER_HOST
+          value: console.{{.Values.global.default_partner_console_domain}}
+        - name: DEFAULT_PARTNER_DOMAIN
+          value: run.dev.rafay-edge.net
+        - name: INFRA_SALT_ROUTER_HOST
+          value: infra-salt-router.rafay-core.svc.cluster.local
+        - name: INFRA_SALT_ROUTER_PORT
+          value: "4600"
+        - name: PROD
+          value: "false"
+        - name: DEPLOYMENT_ENV
+          value: {{ .Values.global.deployment_env }}      
+        {{- if eq .Values.global.isCustomRegistry true}}    
+        - name: REGISTRY_DOMAIN
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/rafay
+        {{- else }}
+        - name: REGISTRY_DOMAIN
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}
+        {{- end }}  
+        - name: EDGE_ZONE
+          value: edges.run.dev.rafay-edge.net
+        - name: INFLUXDB_FQDN
+          value: ops-console.{{.Values.global.default_partner_console_domain}}
+        - name: EVENT_FRAMEWORK_FQDN
+          value: event.core.{{.Values.global.default_partner_console_domain}}
+        - name: RELAY_EXTERNAL_URL
+          value: https://prometheus-relay.{{.Values.global.default_partner_console_domain}}
+        - name: TEAMS
+          value: Operations-Dev
+        - name: FH_FQDN
+          value: dp-cdl-02-staging
+        - name: FH_KINESIS_FQDN
+          value: kinesis.us-west-2.amazonaws.com
+        - name: FH_FIREHOSE_FQDN
+          value: firehose.us-west-2.amazonaws.com
+        - name: FH_STREAM_NAME
+          value: dp-cdm-01-staging
+        - name: CORE_AGGREGATOR_FQDN
+          value: fluentd-aggr.{{.Values.global.default_partner_console_domain}}
+        - name: CORE_REGISTRY_FQDN
+          value: rcr.{{ .Values.global.default_partner_console_domain }}
+        - name: CATALOG_LABELS_ENABLED
+          value: "rafay-core,kube-system"
+        - name: SALT_MASTER_HOST
+          value: infra-salt-orchestrator
+        - name: SALT_BATCH_SIZE
+          value: "10"
+        - name: ENV
+          value: {{ .Values.global.deployment_env }}
+        - name: RAFAY_CLI_BUCKET_URL
+          value: {{ .Values.global.rafay_cli_bucket_url }}
+        - name: RAFAY_CONJURER_URL
+          value: https://console.{{.Values.global.default_partner_console_domain}}/{{ .Values.global.rafay_conjurer_url }}
+        - name: IS_V2_SALT
+          value: "true"  
+        - name: SALT_HA_ENABLED
+          value: "true"
+        - name: RAFAY_REGISTRY_DOMAIN_USER_NAME
+          valueFrom:
+            secretKeyRef:
+              key: registry.user
+              name: edgesrv-secrets
+        - name: RAFAY_REGISTRY_DOMAIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: registry.password
+              name: edgesrv-secrets
+        - name: ALERT_MANAGER_YAML
+          valueFrom:
+            secretKeyRef:
+              key: alert-manager-yaml
+              name: edgesrv-secrets
+        - name: SCHEDULER_CONTROLLER_ADDR
+          value: control.core.{{ .Values.global.default_partner_console_domain }}:443
+        - name: SCHEDULER_API_ADDR
+          value: api.{{ .Values.global.default_partner_console_domain }}
+        {{- if .Values.global.is_external_database }}
+        - name: EDGE_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedb-db-secret
+        {{- else }}
+        - name: EDGE_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+        - name: KAFKA_ENABLED
+          value: "True"
+        - name: DEFAULT_ACCOUNT_ID
+          value: "{{ .Values.global.secrets.aws_account_id }}"
+        - name: DEFAULT_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: edgesrv-secrets
+              key: aws.access.key.id
+        - name: DEFAULT_ACCESS_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: edgesrv-secrets
+              key: aws.secret.access.key
+       {{- if .Values.global.use_instance_role }}
+        - name: DEFAULT_INSTANCE_ROLE_ENABLE
+          value: "true"
+        - name: DEFAULT_IRSA_ROLE_ENABLED
+          value: "{{.Values.global.edge.irsa_role_enabled}}"
+        - name: DEFAULT_IRSA_ROLE_ARN
+          value: "{{.Values.global.edge.irsa_role_arn}}"
+       {{- end }}
+       {{- if .Values.global.ssl_mode }}
+        - name: PGSSLMODE
+          value: {{ default "" .Values.global.ssl_mode }}
+       {{- end }} 
+       {{- if .Values.global.proxy.ip }}
+        - name: https_proxy
+          value: {{ .Values.global.proxy.ip }}:{{ .Values.global.proxy.port }}
+       {{- end }}    
+       {{- if and .Values.global.proxy.ip .Values.global.proxy.noproxy }}  
+        - name: no_proxy
+          value: localhost,10.96.0.0/12,10.224.0.0.0/16,.svc.cluster.local,authsrv,cryptosvc,edge-factory,rafay-sentry,edge-sec,config-processor,keygensvc,rafay-config,{{.Values.global.proxy.noproxy }}
+       {{- else if .Values.global.proxy.ip }}
+        - name: no_proxy
+          value: localhost,10.96.0.0/12,10.224.0.0.0/16,.svc.cluster.local,authsrv,cryptosvc,edge-factory,rafay-sentry,edge-sec,config-processor,keygensvc,rafay-config
+       {{- end }}         
+        image: {{ .Values.edgesrv_image }}    
+        imagePullPolicy: IfNotPresent
+        name: edgesrv
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}        
+        ports:
+        - containerPort: 50701
+          name: edgesrv
+          protocol: TCP
+        - containerPort: 8000
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+            scheme: HTTP
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/infra-certs
+          name: infra-certs
+      {{- if .Values.amp_enabled }}
+      - image: {{.Values.global.aws_sigv4_proxy_image}}
+        imagePullPolicy: IfNotPresent
+        name: aws-sigv4-proxy
+        args:
+          - --name
+          - aps
+          - --region
+          - "{{ .Values.global.monitoring.integrations.amp.region }}"
+          - --host
+          - aps-workspaces.{{ .Values.global.monitoring.integrations.amp.region }}.amazonaws.com
+          - --port
+          - :8005
+        resources:
+          limits:
+            cpu: {{ .Values.sigv4proxy.cpu_limits }}
+            memory: {{ .Values.sigv4proxy.memory_limits }}
+          requests:
+            cpu: {{ .Values.sigv4proxy.cpu_requests }}
+            memory: {{ .Values.sigv4proxy.memory_requests }}
+        ports:
+        - containerPort: 8005
+          protocol: TCP
+      {{- end }}  
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccount: edgesrv-sa
+      hostname: edgesrv
+      imagePullSecrets:
+      - name: rafay-edge-registry-creds
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      volumes:
+      - name: infra-certs
+        projected:
+          sources:
+          - secret:
+              items:
+                - key: tls.crt
+                  path: infra_ca.crt
+              name: infra-ca-tls
+          - secret:
+              items:
+              - key: tls.key
+                path: kmiwrap.key
+              name: selfsigned-cert-tls-kmi-wrap

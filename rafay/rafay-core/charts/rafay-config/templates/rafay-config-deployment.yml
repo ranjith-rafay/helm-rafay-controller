@@ -1,0 +1,320 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: rafay-config
+  name: rafay-config
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: rafay-config
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: rafay-config
+    spec:
+      serviceAccount: rafay-config-sa
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rafay-config
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: rafay-config
+        image: {{ .Values.rafay_config_image }}
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }} 
+        env:
+        - name: IS_SELF_HOSTED
+          value: "true"
+        - name: IS_SELF_SIGNED
+          value: "true"
+        - name: DEPLOYMENT_ENV
+          value: {{ .Values.global.deployment_env }} 
+        - name: NUM_MAX_CD_AGENT_HEALTH_CHECK_WORKERS
+          valueFrom:
+            configMapKeyRef:
+              key: num_max_cd_agent_health_check_workers
+              name: rafay-config-configmap 
+        - name: PROMAPIEXTN
+          value: "tsdb"
+        - name: RPC_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key: rpcPort
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key: apiPort
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key:  dbName
+        - name: SECRET_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key:  secretPath             
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key:  dbUser
+        - name: DB_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key:  dbAddr
+        {{- if .Values.global.is_external_database }}
+        - name: DB_PASSWORD
+          valueFrom:
+              secretKeyRef:
+                key: password
+                name: configv2db-db-secret
+        {{- else }}
+        - name: DB_PASSWORD
+          valueFrom:
+              secretKeyRef:
+                key: password
+                name: configv2dbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+        - name: SCHEDULER_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key:  schedulerAddr
+        - name: PIPELINE_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key:  pipelineAddr
+        - name: DEV
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key: dev
+        - name: PROD
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key: prod
+        - name: AUTH_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: authAddr
+              name: rafay-config-configmap
+        - name: CRYPTO_ADDR
+          value: "cryptosvc:50505"
+        - name: RAFAY-CONFIG-NAMESPACE
+          value: rafay-core
+        - name: ENABLE_PPROF
+          valueFrom:
+            configMapKeyRef:
+              name: rafay-config-configmap
+              key: enablePprof
+        - name: SENTRY_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: sentry.addr
+              name: rafay-config-configmap
+        - name: SENTRY_BOOTSTRAP_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: sentry.bootstrap.addr
+              name: rafay-config-configmap
+        - name: CORE_CD_AGENT_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: cdagent.core.addr
+              name: rafay-config-configmap
+        - name: CD_RELAY_USER_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: cdrelay.user.host
+              name: rafay-config-configmap
+        - name: CORE_AGGREGATOR_FQDN
+          valueFrom:
+            configMapKeyRef:
+              key: fluentd.aggregator.addr
+              name: rafay-config-configmap
+        - name: INFRA_RELAY_USER_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: infrarelay.user.host
+              name: rafay-config-configmap      
+        {{- if eq .Values.global.isCustomRegistry true}} 
+        - name: REGISTRY_FQDN
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/rafay
+        {{- else }}
+        - name: REGISTRY_FQDN
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}        
+        {{- end }}      
+        - name: EDGE_SRV_ADDR
+          value: edgesrv.rafay-core.svc.cluster.local:50701
+        - name: INTERNAL_TRIGGER_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: internal.trigger.endpoint
+              name: rafay-config-configmap
+        - name: VAULTINIT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: VAULTINIT_IMAGE
+              name: rafay-config-imageoverride
+        - name: SECRETSTOREHOOK_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: SECRETSTOREHOOK_IMAGE
+              name: rafay-config-imageoverride
+        - name: CONTROLLER_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: CONTROLLER_IMAGE
+              name: rafay-config-imageoverride
+        - name: CONNECTOR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: CONNECTOR_IMAGE
+              name: rafay-config-imageoverride
+        - name: CDAGENT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: CDAGENT_IMAGE
+              name: rafay-config-imageoverride
+        - name: EDGECLIENT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: EDGECLIENT_IMAGE
+              name: rafay-config-imageoverride
+        - name: RELAYAGENT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: RELAYAGENT_IMAGE
+              name: rafay-config-imageoverride
+        - name: BUSYBOX_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: busyBoxImage
+              name: rafay-config-imageoverride
+        - name: CDAGENT_DOCKER_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: CDAGENT_DOCKER_IMAGE
+              name: rafay-config-imageoverride       
+        {{- if eq .Values.global.isCustomRegistry true}} 
+        - name: REGISTRY_FQDN_OTH
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/rafay
+        {{- else }}
+        - name: REGISTRY_FQDN_OTH
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}        
+        {{- end }}                     
+        - name: REDIS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: redisAddr
+              name: rafay-config-configmap    
+        - name: WORKFLOW_ENGINE_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: engineAddr
+              name: rafay-config-configmap
+        - name: EAAS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: eaasAddr
+              name: rafay-config-configmap      
+        - name: REPOSITORY_FQDN
+          valueFrom:
+            configMapKeyRef:
+              key: repository_fqdn
+              name: rafay-config-configmap
+        {{- if eq .Values.global.isCustomRegistry true}} 
+        - name: VELERO_IMAGE
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/rafay/velero
+        - name: VELERO_AWS_IMAGE
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/rafay/velero-plugin-for-aws:v1.2.1
+        - name: VELERO_AZURE_IMAGE
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/rafay/rafay/velero-plugin-for-microsoft-azure:v1.2.1
+        {{- else }}           
+        - name: VELERO_IMAGE
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/velero
+        - name: VELERO_AWS_IMAGE
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/velero-plugin-for-aws:v1.2.1
+        - name: VELERO_AZURE_IMAGE
+          value: ops-console.{{ .Values.global.default_partner_console_domain }}/rafay/velero-plugin-for-microsoft-azure:v1.2.1             
+        {{- end }}
+
+       {{- if .Values.global.ssl_mode }}
+        - name: PGSSLMODE
+          value: {{ default "" .Values.global.ssl_mode }}
+       {{- end }}
+        - name: PROMETHEUS_URL_COSTMGMT
+          value: http://prometheus-k8s-cost-metrics.rafay-core:9090
+        - name: AWS_S3_REGION
+          valueFrom:
+            configMapKeyRef:
+              key: aws_s3_cb_bucket_region
+              name: rafay-config-configmap
+        - name: AWS_S3_CB_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              key: aws_s3_cb_bucket
+              name: rafay-config-configmap
+        - name: ENABLE_ENGINE_AGENT
+          valueFrom:
+            configMapKeyRef:
+              key: enableEngineAgent
+              name: rafay-config-configmap  
+      imagePullSecrets:
+      - name: rafay-edge-registry-creds
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: rafay-config
+  name: rafay-config
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rafay-config
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

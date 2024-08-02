@@ -1,0 +1,12 @@
+global:
+  default_partner_console_domain: "ranjith.dev.rafay-edge.net"
+  ha_enabled: true
+  generate_self_signed_cert: true
+  size: "M"
+  apiService_create: false   ## IN GKE cluster
+  generate_self_signed_cert: true
+  partner_product_name: Ranjith Test
+  partner_name: Ranjith Test
+  admin_user: "ranjith@rafay.co"
+  admin_password: change123
+  controller_ip: "34.69.102.150"

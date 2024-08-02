@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    release: rafay-core
+  name: cluster-scheduler-servicemonitor
+  namespace: rafay-core
+spec:
+  endpoints:
+  - honorLabels: true
+    interval: 10s
+    path: /metrics
+    port: metrics
+  namespaceSelector:
+    matchNames:
+    - rafay-core
+  selector:
+    matchLabels:
+      app: cluster-scheduler

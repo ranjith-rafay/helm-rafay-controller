@@ -1,0 +1,26 @@
+{{- if .Values.autoscaling.enabled }}
+{{- if ne .Values.global.size "S" }}
+{{- if (semverCompare ">=1.23.0-0" .Capabilities.KubeVersion.Version) }}
+apiVersion: autoscaling/v2 
+{{- else }}
+apiVersion: autoscaling/v2beta1
+{{- end }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "grafana.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ template "grafana.name" . }}
+    helm.sh/chart: {{ template "grafana.chart" . }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ template "grafana.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+{{ toYaml .Values.autoscaling.metrics | indent 4 }}
+{{- end }}
+{{- end }}

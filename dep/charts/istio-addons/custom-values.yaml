@@ -1,0 +1,10 @@
+grafana:
+  grafana:
+    image: registry.rafay-edge.net/grafana/grafana:10.3.1
+global:
+  kiali:
+    repository: registry.rafay-edge.net/kiali/kiali:v1.72.0
+  prometheusconfigmapReload:
+    repository: registry.rafay-edge.net/prometheus-operator/prometheus-config-reloader:v0.71.2
+  prometheus:
+    repository: registry.rafay-edge.net/rafay/prometheus:v2.49.1

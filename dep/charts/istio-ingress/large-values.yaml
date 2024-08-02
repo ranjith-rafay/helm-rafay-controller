@@ -1,0 +1,39 @@
+gateways:
+  istio-ingressgateway:
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 1024Mi
+      requests:
+        cpu: 100m
+        memory: 400Mi  
+
+pilot:
+  # Resources for a small pilot install
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2048Mi
+
+global:
+  defaultResources:
+    requests:
+      cpu: 10m
+
+  proxy:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 2000m
+        memory: 1024Mi
+
+spec:
+  selector:
+    spec:
+      containers:
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2048Mi

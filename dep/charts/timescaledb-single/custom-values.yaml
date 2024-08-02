@@ -1,0 +1,106 @@
+image:
+  repository: registry.rafay-edge.net/timescale/timescaledb-ha:pg14-custom-20240422-3
+  tag: pg14.8-ts2.11.1 
+curlImage:
+  repository: registry.rafay-edge.net/curlimages/curl:8.2.0
+  tag: "7.87.0"
+replicaCount: 3
+fullnameOverride: rafay-tsdb
+persistentVolumes:
+  data:
+    size: 200Gi
+  wal:
+    size: 100Gi
+resources: 
+  # If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: "1"
+    memory: 4Gi
+  requests:
+    cpu: "0.5"
+    memory: 2Gi
+backup:
+  enabled: true
+  pgBackRest:
+    # https://pgbackrest.org/configuration.html
+    # Although not impossible, care should be taken not to include secrets
+    # in these parameters. Use Kubernetes Secrets to specify S3 Keys, Secrets etc.
+    compress-type: lz4
+    process-max: 4
+    start-fast: "y"
+    repo1-retention-diff: 2
+    repo1-retention-full: 2 
+
+  # Overriding the archive-push/archive-get sections is most useful in
+  # very high througput situations. Look at values/high_throuhgput_example.yaml for more details
+  pgBackRest:archive-push: 
+    process-max: 4
+    archive-async: "y"
+  pgBackRest:archive-get: 
+    process-max: 4
+    archive-async: "y"
+    archive-get-queue-max: 2GB
+  jobs:
+      # name: needs to adhere to the kubernetes restrictions
+      # type: can be full, incr or diff, see https://pgbackrest.org/user-guide.html
+      # schedule: https://en.wikipedia.org/wiki/Cron#CRON_expression
+    - name: full-weekly
+      type: full
+      schedule: "12 02 * * 0"
+    - name: incremental-daily
+      type: incr
+      schedule: "12 02 * * 1-6"
+podAnnotations:
+  traffic.sidecar.istio.io/excludeInboundPorts: "5432,8008"
+  traffic.sidecar.istio.io/excludeOutboundPorts: "5432,8008"
+#podManagementPolicy: Parallel
+serviceAccount:
+  create: true
+  # The name of the ServiceAccount to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: rafay-tsdb-sa 
+patroni:
+  log:  
+    level: WARNING
+  bootstrap:    
+    method: restore_or_initdb   
+    restore_or_initdb:  
+      command: >        
+        /etc/timescaledb/scripts/restore_or_initdb.sh   
+        --encoding=UTF8 
+        --locale=C.UTF-8        
+        --wal-segsize=256
+    dcs:        
+      synchronous_mode: true    
+      master_start_timeout: 0
+      postgresql:       
+        parameters:
+          checkpoint_timeout: 300s      
+          synchronous_commit: remote_apply
+          max_standby_archive_delay: -1
+          max_standby_streaming_delay: -1
+          hot_standby_feedback: on
+        use_slots: false
+        use_pg_rewind: false
+  kubernetes:
+    use_endpoints: true 
+  authentication:
+    replication:
+      username: standby
+    superuser:
+      username: postgres
+  postgresql:
+    pg_hba:
+    - hostssl all all 0.0.0.0/0 md5
+    - host    all all 0.0.0.0/0 md5
+    - local   all             all                                   trust
+    - local     all             postgres                              peer
+    - local     all             all                                   md5
+    - hostnossl all,replication all                all                reject
+    - hostssl   all             all                127.0.0.1/32       md5
+    - hostssl   all             all                ::1/128            md5
+    - hostssl   replication     standby            all                md5
+    - hostssl   all             all                all                md5
+#loadBalancer:     
+#  enabled: false

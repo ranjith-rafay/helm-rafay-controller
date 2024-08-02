@@ -1,0 +1,15 @@
+{{- if .Values.global.is_external_database }}
+---
+# admin service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-admin
+spec:
+  type: ExternalName
+  externalName: {{ .Values.global.external_database_host }}
+  ports:
+  - port: 5432
+    targetPort: {{ .Values.global.external_database_port }}
+    name: tcp-postgres
+{{- end }}

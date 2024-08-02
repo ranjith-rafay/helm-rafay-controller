@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: approvals-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: approvals-role
+rules:
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: approvals-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approvals-role
+subjects:
+  - kind: ServiceAccount
+    name: approvals-sa
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: approvals
+  name: approvals
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: approvals
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: approvals
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - approvals
+              topologyKey: kubernetes.io/hostname
+      serviceAccount: approvals-sa
+      containers:
+      - name: approvals
+        image: "{{ .Values.global.envmgr_image }}"
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}        
+        env:
+        - name: APPROVAL_ENABLE_API
+          valueFrom:
+            configMapKeyRef:
+              key: approval.enable_api
+              name: approvals-cm
+        - name: APPROVAL_ENABLE_WORKER
+          valueFrom:
+            configMapKeyRef:
+              key: approval.enable_worker
+              name: approvals-cm
+        - name: APPROVAL_WORKER_REDIS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: approval.approval_worker.redis_addr
+              name: approvals-cm
+        - name: APPROVAL_API_REDIS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: approval.approval_api.redis_addr
+              name: approvals-cm
+        - name: HELPERS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: helpers.addr
+              name: approvals-cm
+        - name: APPROVAL_API_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: approval.approval_api.db_host
+              name: approvals-cm
+        - name: APPROVAL_API_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: approval.approval_api.db_name
+              name: approvals-cm
+        - name: APPROVAL_API_DB_USER
+          valueFrom:
+            configMapKeyRef:
+              key: approval.approval_api.db_user
+              name: approvals-cm
+        {{- if .Values.global.is_external_database }}  
+        - name: APPROVAL_API_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: approvalsdb-db-secret
+        {{- else }} 
+        - name: APPROVAL_API_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: approvalsdbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end}}    
+        - name: LEADER_ELECTION_LEADER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: LEADER_ELECTION_LEASE_LOCK_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: LEADER_ELECTION_LEASE_LOCK_NAME
+          value: "approvals-lock"
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 15010
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+          timeoutSeconds: 5
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 15010
+          periodSeconds: 10
+          successThreshold: 3
+          failureThreshold: 1
+          timeoutSeconds: 5
+          initialDelaySeconds: 5  
+        

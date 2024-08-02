@@ -1,0 +1,78 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: copilot-conversation-manager
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: copilot-conversation-manager
+  template:
+    metadata:
+      labels:
+        app: copilot-conversation-manager
+    spec:
+      containers:
+      - env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: openai.api.key
+              name: {{.Chart.Name}}-secrets
+        - name: VECTOR_STORE_TYPE
+          value: qdrant
+        - name: COPILOT_RAG_AGENT_PORT
+          value: "50051"
+        - name: COPILOT_RAG_AGENT_HOST
+          value: copilot-custom-rag-openai-agent.rafay-core.svc.cluster.local
+        - name: DB_TYPE
+          value: postgres
+        - name: DB_HOST
+          value: postgres-admin
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: ai.db.user
+              name: {{.Chart.Name}}-secrets                  
+        {{- if .Values.global.is_external_database }}  
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aidb-db-secret
+        {{- else }}    
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: aidbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }} 
+        - name: DB_DATABASE
+          value: aidb
+        - name: DEPLOYMENT_ENV
+          value: {{ .Values.global.deployment_env }}
+        - name: TESTBED_NAME
+          value: {{ .Values.global.testbed_name }}
+        - name: LLM_MODEL
+          value: "openai/gpt-3.5-turbo-0125"
+        - name: EMBEDDINGS_TYPE
+          value: "openai/text-embedding-ada-002"
+        image: {{.Values.copilot_conversation_manager_image }}
+        imagePullPolicy: IfNotPresent
+        name: copilot-conversation-manager
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+        ports:
+        - containerPort: 50051  # The port on which your gRPC service is running
+      serviceAccount: copilot-conversation-manager-sa
+      serviceAccountName: copilot-conversation-manager-sa

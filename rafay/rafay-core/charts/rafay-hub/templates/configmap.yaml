@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rafay-hub
+data:
+  api.port: "7001"
+  rpc.port: "7000"
+  internal.trigger.port: "9001"
+  dev: "false"
+  authAddr: authsrv:50011
+  enablePprof: "true"
+  sentry.addr: rafay-sentry:7000
+  config.addr: "rafay-config:7000"
+  infra.provisioner.addr: "infra-provisioner:7000"
+  pipeline.addr: "rafay-pipeline:7000"
+  edgesrv.addr: "edgesrv:7000"
+  groupcache.port: "8080"
+  cdagent.core.addr: rafay-cd-agent:7000
+  cdrelay.user.host: "*.user.cdrelay.{{ .Values.global.default_partner_console_domain }}:443"
+  hub.api.host: ""
+  eaas.addr: eaas-api:6000

@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-sec
+spec:
+  ports:
+    - protocol: TCP
+      name: grpc
+      port: 50003
+      targetPort: 50003
+  selector:
+    app: edge-sec
+
+---

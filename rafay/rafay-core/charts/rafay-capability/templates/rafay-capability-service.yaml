@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: capability-api
+spec:
+  ports:
+  - name: capability-rpc
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  - name: capability-api
+    port: 5001
+    protocol: TCP
+    targetPort: 5001
+  selector:
+    app: capability-api
+  type: ClusterIP

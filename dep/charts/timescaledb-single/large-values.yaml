@@ -1,0 +1,14 @@
+resources: 
+  limits:
+    cpu: "1"
+    memory: "4Gi"
+  requests:
+    cpu: "0.5"
+    memory: "2Gi"
+backup:
+  enabled: true
+persistentVolumes:
+  data:
+    size: 200Gi
+  wal:
+    size: 100Gi

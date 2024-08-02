@@ -1,0 +1,175 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: edge-processor-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: edge-processor-role
+rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    - endpoints
+    verbs:
+    - '*'
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: edge-processor-rb
+subjects:
+- kind: ServiceAccount
+  name: edge-processor-sa
+  namespace: rafay-core
+roleRef:
+  kind: Role
+  name: edge-processor-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: edge-processor
+  name: edge-processor
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: edge-processor
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: edge-processor
+        velero.io/exclude-from-backup: "true"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - edge-processor
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      containers:
+      - env:
+        {{- if .Values.amp_enabled }}
+        - name: EDGE_PROCESSOR_INFLUX_CONN_URL
+          value: {{ printf "http://localhost:8005/workspaces/%s" .Values.global.monitoring.integrations.amp.workspaceId | quote }}
+        {{- else }}
+        - name: EDGE_PROCESSOR_INFLUX_CONN_URL
+          value: "http://promscale-connector:9201/write" 
+        {{- end }}
+        - name: EDGE_PROCESSOR_SERVER_PORT
+          value: "60001"
+        - name: EDGE_PROCESSOR_PRODUCTION
+          value: "false"
+        - name: EDGE_PROCESSOR_BROKER_PORT
+          value: "5448"
+        - name: EDGE_PROCESSOR_API_PORT
+          value: "8000"
+        - name: EDGE_PROCESSOR_PG_HOST
+          value: postgres-admin
+        - name: EDGE_PROCESSOR_PG_PORT
+          value: "5432"
+        - name: EDGE_PROCESSOR_PG_DATABASE
+          value: edgedb
+        - name: EDGE_PROCESSOR_IS_SELF_HOSTED
+          value: "true"
+        - name: EDGE_PROCESSOR_PG_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: edge.db.user
+              name: edge-processor-secrets
+        - name: EDGE_PROCESSOR_REDIS_ADDR
+          value: "{{ .Values.global.redis_endpoint  }}:6379"
+        {{- if .Values.global.is_external_database }}
+        - name: EDGE_PROCESSOR_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedb-db-secret 
+        {{- else }}
+        - name: EDGE_PROCESSOR_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do  
+        {{- end }}
+        - name: EDGE_PROCESSOR_WAVELENGTH_HOSTED_ZONE_ID
+          value: {{ .Values.global.wavelength_hosted_zone_id }}
+        - name: EDGE_PROCESSOR_WAVELENGTH_DNS_HOST_NAME
+          value: {{ .Values.global.wavelength_dns_host_name }}
+        - name: EDGE_PROCESSOR_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: {{ .Values.edge_processor_image }}
+        imagePullPolicy: IfNotPresent
+        name: edge-processor
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+        ports:
+        - containerPort: 60001
+          protocol: TCP
+      dnsPolicy: ClusterFirstWithHostNet
+      hostname: edge-processor
+      imagePullSecrets:
+      - name: rafay-edge-registry-creds
+      restartPolicy: Always
+      serviceAccount: edge-processor-sa
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: edge-processor
+  name: edge-processor
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: edge-processor
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

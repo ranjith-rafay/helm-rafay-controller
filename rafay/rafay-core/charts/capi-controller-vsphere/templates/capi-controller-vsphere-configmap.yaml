@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: capi-controller-vsphere-configmap
+data:
+  sentry.addr: "rafay-sentry:7000"
+  infrarelay.user.host: "*.user.infrarelay.{{.Values.global.default_partner_console_domain}}:443"
+  ova.template.s3.url: "{{ .Values.global.ova_template_s3_url }}"
+  nexus.url: "https://ops-console.{{ .Values.global.default_partner_console_domain }}"
+  github.token: "{{ .Values.global.capi_public_gh_token }}"
+  capi.version: "{{ .Values.capi_version }}"
+  capv.version: "{{ .Values.capv_version }}"
+  cert.manager.version: "{{ .Values.cert_manager_version }}"
+  capi.image.repository: "ops-console.{{.Values.global.default_partner_console_domain}}/rafay"

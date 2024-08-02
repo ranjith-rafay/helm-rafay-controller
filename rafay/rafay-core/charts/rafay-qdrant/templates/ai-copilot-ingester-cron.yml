@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: copilot-data-ingester
+spec:
+  schedule: "0 */12 * * *"
+  successfulJobsHistoryLimit: 1
+  suspend: true #disabling the cronjob
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          containers:
+          - name: copilot-data-ingester
+            image: {{.Values.copilot_custom_rag_openai_ingester_image }}
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: VECTOR_STORE_TYPE
+              value: "qdrant"
+            - name: EMBEDDINGS_TYPE
+              value: "openai/text-embedding-ada-002"
+            - name: VECTOR_STORE_HOST
+              value: "rafay-qdrant.rafay-core.svc.cluster.local"
+            - name: VECTOR_STORE_PORT
+              value: "6333"
+            - name: VECTOR_STORE_COLLECTION
+              value: "rafay-collection"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: openai.api.key
+                  name: ai-copilot-secrets
+            - name: DOCUMENT_CHUNK_SIZE
+              value: "2048"
+            - name: DOCUMENT_CHUNK_OVERLAP
+              value: "256"
+            - name: BUILD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: docs.pat
+                  name: ai-copilot-secrets
+            - name: DOCS_GIT_PATH
+              value: "github.com/RafaySystems/docs.git"
+            - name: DOCS_BASE_URL
+              value: "https://docs.rafay.co/"
+            - name: DB_DATABASE
+              value: "aidb"
+            - name: DB_TYPE
+              value: "postgres"
+            - name: DB_HOST
+              value: "postgres-admin"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ai-copilot-secrets
+                  key: ai.db.user
+            {{- if .Values.global.is_external_database }}  
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: ai-copilot-secrets
+            {{- else }}    
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: aidbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+            {{- end }}           
+          restartPolicy: OnFailure

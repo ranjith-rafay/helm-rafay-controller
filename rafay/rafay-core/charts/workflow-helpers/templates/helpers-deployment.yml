@@ -1,0 +1,67 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: rafay-workflow-helpers
+  name: rafay-workflow-helpers
+  namespace: rafay-core
+spec:
+  {{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+  {{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: rafay-workflow-helpers
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: rafay-workflow-helpers
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - rafay-workflow-helpers
+              topologyKey: kubernetes.io/hostname        
+      containers:
+      - name: rafay-workflow-helpers
+        image:  {{.Values.workflow_helpers_image }}
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }} 
+        env:
+        - name: HELPERS_ENGINE_API_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: helpers.engine_api_endpoint
+              name: rafay-workflow-helpers-cm
+        - name: HELPERS_EAAS_API_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: helpers.eaas_api_endpoint
+              name: rafay-workflow-helpers-cm
+        - name: HELPERS_APPROVAL_API_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: helpers.approval_api_endpoint
+              name: rafay-workflow-helpers-cm

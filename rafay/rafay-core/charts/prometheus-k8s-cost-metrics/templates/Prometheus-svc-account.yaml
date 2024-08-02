@@ -1,0 +1,6 @@
+{{- if .Values.global.monitoring.integrations.amp.enabled}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-k8s
+{{ end }}

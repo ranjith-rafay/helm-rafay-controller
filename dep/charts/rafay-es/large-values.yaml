@@ -1,0 +1,3 @@
+persistance:
+   resources: {}
+   size: 500Gi

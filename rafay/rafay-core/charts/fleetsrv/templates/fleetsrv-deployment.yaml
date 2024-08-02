@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fleetsrv-sa
+  namespace: rafay-core
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: rafay-core
+  name: fleetsrv-role
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["*"]
+  - apiGroups: 
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fleetsrv-rb
+  namespace: rafay-core
+subjects:
+  - kind: ServiceAccount
+    name: fleetsrv-sa
+    namespace: rafay-core
+roleRef:
+  kind: Role
+  name: fleetsrv-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleetsrv
+  namespace: rafay-core
+spec:
+  selector:
+    matchLabels:
+      app: fleetsrv
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: fleetsrv
+    spec:
+      containers:
+        - env:
+            - name: HOST
+              value: https://console.{{ .Values.global.default_partner_console_domain }}
+            - name: PG_HOST
+              value: postgres-admin
+            - name : PG_PORT
+              value: "5432"
+            - name: PG_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: dbName
+                  name: fleetsrv-config
+            - name: PG_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: dbUser
+                  name: fleetsrv-config
+        {{- if .Values.global.is_external_database }}
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: fleetsrvdb-db-secret 
+        {{- else }}
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: fleetsrvdbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+            - name: SCHEDULER_ADDR
+              value: scheduler.rafay-core.svc.cluster.local:5000
+            - name: CONFIG_ADDR
+              value: rafay-config:7000
+            - name: EDGE_SUFFIX
+              value: {{ .Values.global.edge_suffix }}
+            - name: DEFAULT_PARTNER_DOMAIN
+              value: {{ .Values.global.default_partner_console_domain }}
+            - name: PROD
+              value: "false"
+            - name: DEPLOYMENT_ENV
+              value: {{ .Values.global.deployment_env }}
+            - name: REGISTRY_DOMAIN
+              value: rcr.{{ .Values.global.default_partner_console_domain }}
+            - name: EDGE_ZONE
+              value: edges.run.{{ .Values.global.default_partner_console_domain }}
+            - name: TEAMS
+              value: Operations-Dev
+            - name: CORE_REGISTRY_FQDN
+              value: rcr.{{ .Values.global.default_partner_console_domain }}
+            - name: CATALOG_LABELS_ENABLED
+              value: rafay-core-dev,kube-system-dev
+            - name: SALT_MASTER_HOST
+              value: infra-salt-orchestrator.rafay-core.svc.cluster.local
+            - name: ENV
+              value: {{ .Values.global.deployment_env }}
+            - name: IS_SELF_SIGNED
+              value: "true"
+        {{- if .Values.global.is_external_database }}
+            - name: EDGE_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: edgedb-db-secret
+        {{- else }}
+            - name: EDGE_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: edgedbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+          image: {{.Values.fleetsrv_image }}
+          imagePullPolicy: IfNotPresent
+          name: fleetsrv
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+          resources:
+            limits:
+              cpu: "{{ .Values.cpu_limits }}"
+              memory: "{{ .Values.memory_limits }}"
+            requests:
+              cpu: "{{ .Values.cpu_requests }}"
+              memory: "{{ .Values.memory_requests }}"
+          {{- end }}
+      serviceAccount: fleetsrv-sa
+      serviceAccountName: fleetsrv-sa
+      terminationGracePeriodSeconds: 10

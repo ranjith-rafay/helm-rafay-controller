@@ -1,0 +1,31 @@
+{{- if .Values.snapshotsEnabled }}
+---
+apiVersion: velero.io/v1
+kind: VolumeSnapshotLocation
+metadata:
+  name: "default"
+  namespace: velero
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade,post-rollback
+    "helm.sh/hook-delete-policy": before-hook-creation
+  labels:
+    app.kubernetes.io/name: velero 
+    app.kubernetes.io/instance: velero
+    app.kubernetes.io/managed-by: Helm 
+    helm.sh/chart: velero-5.3.0 
+spec:
+  {{- if not (empty .credential) }}
+  credential:
+    {{- with .credential.name }}
+    name: {{ . }}
+    {{- end }}
+    {{- with .credential.key }}
+    key: {{ . }}
+    {{- end }}
+  {{- end }}
+  provider: {{ .Values.global.velero.provider }}
+  config:
+    {{- if eq .Values.global.deployment_type "EKS" }}
+    region: {{ .Values.global.velero.region }}
+    {{- end }}
+{{- end }}

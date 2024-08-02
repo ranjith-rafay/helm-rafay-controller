@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: nexus-server
+  name: nexus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexus-server
+  serviceName: "nexus-service"
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app: nexus-server
+    spec:
+      initContainers:
+      - image: {{.Values.initContainers.image}}
+        name: nexus-init
+        volumeMounts:
+        - mountPath: /nexus-data
+          name: nexus-data
+      containers:
+      - name: reverse-proxy
+        image: {{.Values.reverseProxy.image}}
+        ports:
+        - containerPort: 80
+          protocol: TCP
+      - name: nexus
+        env:
+        - name: install4jAddVmParams
+          value: -Xms1200M -Xmx1200M -XX:MaxDirectMemorySize=2G -XX:+UnlockExperimentalVMOptions
+            -XX:+UseCGroupMemoryLimitForHeap
+        - name: NEXUS_SECURITY_RANDOMPASSWORD
+          value: "false"
+        - name: UPDRADE_V13
+          value: "true"  
+        image: {{.Values.image}}
+        imagePullPolicy: IfNotPresent  
+        ports:
+        - containerPort: 8443
+          protocol: TCP
+        - containerPort: 8081
+          protocol: TCP
+        - containerPort: 5000
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "1"
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 2Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /nexus-data
+          name: nexus-data
+        - mountPath: /nexus-conf
+          name: nexus-init
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        lifecycle:
+           postStart:
+             exec:
+               command: ["/bin/sh","+x","/nexus-conf/repo-create.sh"]
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 200
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: nexus-init
+        configMap:
+          name: nexus-config
+  volumeClaimTemplates:
+  - metadata:
+     name: nexus-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      {{- if eq .Values.global.deployment_type "AIRGAP" }}
+      storageClassName: {{ .Values.global.storageClass }}
+      {{- end }}        
+      resources:
+        requests:
+          storage: {{ .Values.nexus_volume_size }}

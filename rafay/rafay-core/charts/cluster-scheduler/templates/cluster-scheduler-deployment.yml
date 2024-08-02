@@ -1,0 +1,261 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-scheduler
+spec:
+  selector:
+    matchLabels:
+      app: cluster-scheduler
+  strategy:
+    rollingUpdate:
+  # serviceName: "scheduler"
+{{- if eq .Values.global.ha_enabled true }}
+  replicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  replicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  template:
+    metadata:
+      labels:
+        app: cluster-scheduler
+    spec:
+      serviceAccount: "cluster-scheduler-sa"
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: cluster-scheduler
+        image: {{ .Values.cluster_scheduler_image }}
+        env:
+        - name: IS_SELF_HOSTED
+          value: "true"
+        - name: DEPLOYMENT_ENV
+          value: {{ .Values.global.deployment_env }} 
+        - name: CRYPTO_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: cryptoAddr
+              name: scheduler-config
+        - name: RPC_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: rpcPort
+        - name: SCHEDULER_NAMESPACE
+          value: rafay-core
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: apiPort
+        - name: PEER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: peerPort
+        - name: CONNECTOR_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: connectorPort
+        - name: CONFIG_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: configAddr
+        - name: DB_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: dbAddr
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: dbName
+        - name: SECRET_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: secretPath
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: dbUser
+        {{- if .Values.global.is_external_database }}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: clusterdb-db-secret
+        {{- else }}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: clusterdbuser.postgres-admin.credentials.postgresql.acid.zalan.do
+        {{- end }}
+        - name: DEV
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: dev
+        - name: CONTROL_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: controlAddr
+        - name: API_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: apiAddr
+        - name: AUTH_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: authAddr
+              name: scheduler-config
+        - name: EDGE_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: edgeAddr
+              name: scheduler-config
+        - name: TS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: tsAddr
+              name: scheduler-config
+        - name: CONNECTOR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: connectorImage
+        - name: SENTRY_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: sentryAddr
+              name: scheduler-config
+        - name: SENTRY_BOOTSTRAP_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: sentryBootstrapAddr
+              name: scheduler-config
+        - name: HELM3_TEMP_FOLDER
+          valueFrom:
+            configMapKeyRef:
+              key: helm3TempPath
+              name: scheduler-config
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: ENABLE_PPROF
+          valueFrom:
+            configMapKeyRef:
+              key: enablePprof
+              name: scheduler-config
+        - name: CONTROLLER_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: scheduler-config
+              key: controllerImage
+        - name: REDIS_ADDR
+          valueFrom:
+            configMapKeyRef:
+              key: redisAddr
+              name: scheduler-config
+        - name: TRACING_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              key: tracingEnabled
+              name: scheduler-config
+        - name: TRACING_DSN
+          valueFrom:
+            configMapKeyRef:
+              key: tracingDSN
+              name: scheduler-config
+        - name: RELAY_AGENT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: relayAgentImage
+              name: scheduler-config     
+        - name: BUSYBOX_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              key: busyBoxImage
+              name: scheduler-config
+        - name: MAX_RETRIES
+          value: "10"
+        - name: RELAY_TIMEOUT_DURATION
+          value: 60s
+        {{- if .Values.global.ssl_mode }}
+        - name: PGSSLMODE
+          value: {{ default "" .Values.global.ssl_mode }}
+        {{- end }}  
+        {{- if or (eq .Values.global.ha_enabled true) (eq .Values.global.size "S") (eq .Values.global.size "M") (eq .Values.global.size "L") }}
+        resources:
+          limits:
+            cpu: "{{ .Values.cpu_limits }}"
+            memory: "{{ .Values.memory_limits }}"
+          requests:
+            cpu: "{{ .Values.cpu_requests }}"
+            memory: "{{ .Values.memory_requests }}"
+        {{- end }}
+        volumeMounts:
+        - mountPath: /etc/secret
+          name: connector-secret
+        - mountPath: /opt/rcloud/certs
+          name: certs
+        - mountPath: /tmp
+          name: helm-tmp-volume
+        - mountPath: /root/.kube
+          name: cache-volume
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - name: helm-tmp-volume
+        emptyDir: {}
+      - name: cache-volume
+        emptyDir: {}
+      - name: connector-secret
+        secret:
+          secretName: connector-secret
+      - name: certs
+        projected:
+          sources:
+          - secret:
+              items:
+              - key: tls.crt
+                path: connector.pem
+              - key: tls.key
+                path: connector-key.pem
+              name: selfsigned-cert-tls-scheduler
+          - secret:
+              items:
+              - key: tls.crt
+                path: ca.pem
+              - key: tls.key
+                path: ca-key.pem
+              name: infra-ca-tls
+---
+{{- if .Values.global.ha_enabled }}
+{{- if ne .Values.global.size "S" }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: cluster-scheduler
+  name: cluster-scheduler
+spec:
+  maxReplicas: {{ default "10" .Values.maxReplicas }}
+{{- if eq .Values.global.ha_enabled true }}
+  minReplicas: {{ default "3" .Values.global.minReplicaCount }}
+{{- else }}
+  minReplicas: {{ default "1" .Values.global.minReplicaCount }}
+{{- end }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cluster-scheduler
+  targetCPUUtilizationPercentage: 80
+{{- end }}
+{{- end }}

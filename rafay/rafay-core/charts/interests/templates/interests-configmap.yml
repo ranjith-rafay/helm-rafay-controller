@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{.Chart.Name}}-cm
+data:
+  interest.enable_api: "true"
+  interest.interest_api.db_host: postgres-admin
+  interest.interest_api.db_user: interestsdbuser
+  interest.interest_api.db_name: interestsdb

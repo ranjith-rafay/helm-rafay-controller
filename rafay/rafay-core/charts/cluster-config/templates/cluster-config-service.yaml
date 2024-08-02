@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-config
+  labels:
+    app: cluster-config
+spec:
+  selector:
+    app: cluster-config
+  ports:
+  - name: tcp-clusterconfig
+    protocol: TCP  
+    port: 8000
+    targetPort: 8000
+  - name: grpc
+    port: 50014
+    protocol: TCP
+    targetPort: 50014

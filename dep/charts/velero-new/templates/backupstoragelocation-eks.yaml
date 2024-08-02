@@ -1,0 +1,43 @@
+{{- if and .Values.backupsEnabled (eq .Values.global.deployment_type "EKS") }}
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: default
+  namespace: velero
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade,post-rollback
+    "helm.sh/hook-delete-policy": before-hook-creation
+  labels:
+    app.kubernetes.io/name: velero
+    app.kubernetes.io/instance: velero 
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: velero
+spec:
+  {{- if not (empty .credential) }}
+  credential:
+    {{- with .credential.name }}
+    name: {{ . }}
+    {{- end }}
+    {{- with .credential.key }}
+    key: {{ . }}
+    {{- end }}
+  {{- end }}
+  provider: {{ .Values.global.velero.provider }}
+  accessMode: {{ .accessMode | default "ReadWrite" }}
+  {{- with .default }}
+  default: {{ . }}
+  {{- end }}
+  {{- with .validationFrequency }}
+  validationFrequency: {{ . }}
+  {{- end }}
+  objectStorage:
+    bucket: "{{ .Values.global.velero.bucket_name }}"
+    {{- with .prefix }}
+    prefix: {{ . | quote }}
+    {{- end }}
+    {{- with .caCert }}
+    caCert: {{ . }}
+    {{- end }}
+  config:
+    region: {{.Values.global.velero.region}}
+{{ end }}      

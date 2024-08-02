@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: rafay-relay-audit
+spec:
+{{- if eq .Values.global.ha_enabled true }}
+ {{- if eq .Values.global.deployment_type "AIRGAP" }}
+ storageClassName: {{ .Values.global.storageClass }}
+ {{- else }}
+{{- if .Release.IsUpgrade }}
+ storageClassName: {{ (lookup "v1" "PersistentVolumeClaim" "rafay-core" "rafay-relay-audit").spec.storageClassName }}
+{{- else }}
+ storageClassName: {{ .Values.global.storageClass }}
+ {{- end }}
+ {{- end }}
+ accessModes:
+  - ReadWriteOnce
+{{- else }}
+{{- if .Release.IsUpgrade }}
+ storageClassName: {{ (lookup "v1" "PersistentVolumeClaim" "rafay-core" "rafay-relay-audit").spec.storageClassName }}
+{{- else }}
+ storageClassName: {{ .Values.global.storageClass }}
+ {{- end }}
+ accessModes:
+  - ReadWriteOnce
+{{- end }}
+ resources:
+   requests:
+     storage: 1Gi

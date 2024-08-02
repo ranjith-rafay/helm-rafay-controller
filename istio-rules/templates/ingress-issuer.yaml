@@ -1,0 +1,14 @@
+{{- if eq .Values.global.generate_self_signed_cert true }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: self-signed-ingress-ca-issuer
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: certmanager
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+spec:
+  ca:
+    secretName: ingress-ca-tls
+{{- end }}

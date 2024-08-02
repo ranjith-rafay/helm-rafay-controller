@@ -1,0 +1,155 @@
+{{- if eq .Values.global.deployment_type "EKS"}}
+{{- if eq .Values.global.external_lb true }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- if eq .Values.global.blueprintVersion "v2" }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: "preserve_client_ip.enabled=true"
+    {{- else }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: "preserve_client_ip.enabled=false"
+    {{- end }}
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.global.acm_arn | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "30326"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/healthz/ready"
+    service.beta.kubernetes.io/aws-load-balancer-subnets: {{ .Values.global.lb_subnet_ids | replace " " "," | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-scheme: {{ default "internal" .Values.global.lb_scheme | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-internal: "{{ ternary "true" "false" (eq .Values.global.lb_scheme "internal")}}"
+    {{- if .Values.global.external_dns.enabled}}
+    external-dns.alpha.kubernetes.io/hostname: "ui.{{ .Values.global.default_partner_console_domain }}"
+    {{- end }}
+  name: istio-ingressgateway
+  namespace: istio-system
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - name: http2
+    nodePort: 30426
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  - name: http2-insecure
+    nodePort: 30726
+    port: 443
+    protocol: TCP
+    targetPort: 8081
+  selector:
+    app: istio-ingressgateway
+    istio: ingressgateway
+  sessionAffinity: None
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    {{- if eq .Values.global.blueprintVersion "v2" }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+    {{- else }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    {{- end }}
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "30326"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/healthz/ready"
+    service.beta.kubernetes.io/aws-load-balancer-subnets: {{ .Values.global.lb_subnet_ids | replace " " "," | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-scheme: {{ default "internal" .Values.global.lb_scheme | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-internal: "{{ ternary "true" "false" (eq .Values.global.lb_scheme "internal")}}"
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: "preserve_client_ip.enabled=false"
+    {{- if .Values.global.external_dns.enabled}}
+    external-dns.alpha.kubernetes.io/hostname: "backend.{{ .Values.global.default_partner_console_domain }}"
+    {{- end }}
+  name: istio-ingressgateway-https
+  namespace: istio-system
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - name: status-port
+    nodePort: 30326
+    port: 15021
+    protocol: TCP
+    targetPort: 15021
+  - name: https
+    nodePort: 30526
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: istio-ingressgateway
+    istio: ingressgateway
+  sessionAffinity: None
+  type: LoadBalancer
+{{- else }}
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    meta.helm.sh/release-name: istio-services
+    meta.helm.sh/release-namespace: istio-system
+    {{- if eq .Values.global.blueprintVersion "v2" }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+    {{- else }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    {{- end }}    
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: /healthz/ready
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "30326"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "{{ ternary "true" "false" (eq .Values.global.lb_scheme "internal")}}"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: {{ default "internal" .Values.global.lb_scheme | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-subnets: {{ .Values.global.lb_subnet_ids | replace " " "," | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: "preserve_client_ip.enabled=false"
+    {{- if .Values.global.external_dns.enabled}}
+    external-dns.alpha.kubernetes.io/hostname: "ui.{{ .Values.global.default_partner_console_domain }}"
+    {{- end }}    
+  name: istio-ingressgateway
+  namespace: istio-system
+  labels:
+    app: istio-ingressgateway
+    istio: ingressgateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: istio-ingressgateway
+    istio: ingressgateway
+  ports:
+    - name: status-port
+      nodePort: 30326
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+    - name: http2
+      nodePort: 30426
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+    - name: https
+      nodePort: 30526
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+    - name: tls
+      nodePort: 30626
+      port: 15443
+      protocol: TCP
+      targetPort: 15443
+    - name: http2-insecure
+      nodePort: 30726
+      port: 81
+      protocol: TCP
+      targetPort: 8081  
+  {{- end }}
+  {{- end }}

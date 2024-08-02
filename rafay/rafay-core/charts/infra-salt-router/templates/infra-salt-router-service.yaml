@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-salt-router
+spec:
+  ports:
+    - name: grpc
+      port: 4600
+      protocol: TCP
+      targetPort: 4600
+    - name: api
+      port: 4700
+      protocol: TCP
+      targetPort: 4700
+  selector:
+    app: infra-salt-router
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
