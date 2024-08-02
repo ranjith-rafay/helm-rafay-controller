@@ -1,8 +1,0 @@
-# resources define the container resource limits for the operator.
-resources:
-  limits:
-    cpu: 1
-    memory: 512Mi
-  requests:
-    cpu: 0
-    memory: 0

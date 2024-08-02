@@ -1,9 +1,0 @@
-replicaCount: 1
-
-image:
-  repository: public.ecr.aws/aws-observability/aws-sigv4-proxy
-  tag: "1.0"
-serviceAccount:
-  create: true
-  annotations: {}
-  name: "sigv4-proxy-sa"

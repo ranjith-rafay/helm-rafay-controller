@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: engine-agent-cm
-  namespace: engine-agents
-data:
-  engine.enable_agent: "true"
-  engine.engine_agent.global: "true"
-  engine.engine_agent.endpoint: "https://console.{{.Values.global.default_partner_console_domain}}"

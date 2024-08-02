@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rafay-workflow-helpers-cm
-  namespace: rafay-core
-data:
-  helpers.engine_api_endpoint: "https://console.{{.Values.global.default_partner_console_domain}}"
-  helpers.eaas_api_endpoint: "https://console.{{.Values.global.default_partner_console_domain}}"
-  helpers.approval_api_endpoint: "https://console.{{.Values.global.default_partner_console_domain}}"

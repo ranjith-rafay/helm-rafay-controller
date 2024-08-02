@@ -1,6 +1,0 @@
-apiVersion: v1
-appVersion: "2.5.0"
-description: A Helm chart for Istio-rules
-name: istio-rules
-version: 2.5.0 
-
