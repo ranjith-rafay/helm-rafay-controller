@@ -4,7 +4,6 @@ global:
   generate_self_signed_cert: true
   size: "M"
   apiService_create: false   ## IN GKE cluster
-  generate_self_signed_cert: true
   partner_product_name: Company Controller 
   partner_name: Company Controller
   admin_user: "user@company.co"
