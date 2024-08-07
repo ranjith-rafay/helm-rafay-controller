@@ -9,4 +9,4 @@ global:
   partner_name: Company Controller
   admin_user: "user@company.co"
   admin_password: change123
-  controller_ip: "
+  controller_ip: ""
