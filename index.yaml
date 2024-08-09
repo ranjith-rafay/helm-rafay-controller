@@ -3,17 +3,17 @@ entries:
   istio-rules:
   - apiVersion: v1
     appVersion: 2.5.0
-    created: "2024-08-05T10:36:25.834573144Z"
+    created: "2024-08-09T06:59:03.734960488Z"
     description: A Helm chart for Istio-rules
     digest: 489f0a21b0a6b45a625e82fcfba6570abe577f83b53493d49697aca42680e909
     name: istio-rules
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/istio-rules-2.5.0.tgz
+    - https://ranjith-rafay.github.com/helm-rafay-controller/istio-rules-2.5.0.tgz
     version: 2.5.0
   rafay-dep:
   - apiVersion: v2
     appVersion: 2.5.0
-    created: "2024-08-05T10:36:25.879807771Z"
+    created: "2024-08-09T06:59:03.774531736Z"
     dependencies:
     - name: base
       repository: file://charts/base
@@ -24,9 +24,6 @@ entries:
     - name: istio-ingress
       repository: file://charts/istio-ingress
       version: 1.0.0
-    - name: istio-services
-      repository: file://charts/istio-services
-      version: 0.1.0
     - name: eck-operator
       repository: file://charts/eck-operator
       version: 2.6.1
@@ -46,20 +43,20 @@ entries:
       repository: file://charts/cert-manager
       version: v1.11.0
     description: A Helm chart for Kubernetes
-    digest: 0f0e1b0056b32be39bfc0b8b73fe8268ceca4d4a8af262e2cf59bb7eb04c0297
+    digest: f51c605d2318e11284ec132de86fd730bf193e1e3e3eff370ad0f63d53c28eae
     name: rafay-dep
     type: application
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.5.5.tgz
-    version: 2.5.5
+    - https://ranjith-rafay.github.com/helm-rafay-controller/rafay-dep-2.5.6.tgz
+    version: 2.5.6
   rafaycore:
   - apiVersion: v1
     appVersion: 2.5.1
-    created: "2024-08-05T10:36:25.913506846Z"
+    created: "2024-08-09T06:59:03.805401731Z"
     description: A Helm chart for Rafay core
     digest: 104083209d821c862d50d3bf2ebacb98ab28f7d0d0bc331fe2b78d5def1f5a97
     name: rafaycore
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/rafaycore-2.5.6.tgz
+    - https://ranjith-rafay.github.com/helm-rafay-controller/rafaycore-2.5.6.tgz
     version: 2.5.6
-generated: "2024-08-05T10:36:25.833980756Z"
+generated: "2024-08-09T06:59:03.734340468Z"
