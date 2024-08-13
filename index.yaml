@@ -3,7 +3,7 @@ entries:
   istio-rules:
   - apiVersion: v1
     appVersion: 2.5.0
-    created: "2024-08-13T10:20:40.132268969Z"
+    created: "2024-08-13T10:40:23.872523032Z"
     description: A Helm chart for Istio-rules
     digest: 0277f93927f0d7ef5f85c2ff7e7588c31813138abcd719d61bfdaf7cdc586ee6
     name: istio-rules
@@ -13,7 +13,45 @@ entries:
   rafay-dep:
   - apiVersion: v2
     appVersion: 2.5.0
-    created: "2024-08-13T10:20:40.166630401Z"
+    created: "2024-08-13T10:40:23.941980291Z"
+    dependencies:
+    - name: base
+      repository: file://charts/base
+      version: 1.0.0
+    - name: istiod
+      repository: file://charts/istio-discovery
+      version: 1.0.0
+    - name: istio-ingress
+      repository: file://charts/istio-ingress
+      version: 1.0.0
+    - name: eck-operator
+      repository: file://charts/eck-operator
+      version: 2.6.1
+    - name: timescaledb-single
+      repository: file://charts/timescaledb-single
+      version: 0.33.1
+    - name: redis
+      repository: file://charts/redis
+      version: 17.9.5
+    - name: rafay-kafka
+      repository: file://charts/rafay-kafka
+      version: 0.2.0
+    - name: postgres-operator
+      repository: file://charts/postgres-operator
+      version: 1.9.0
+    - name: cert-manager
+      repository: file://charts/cert-manager
+      version: v1.11.0
+    description: A Helm chart for Kubernetes
+    digest: 19d371c8d1a8e50abc3910be449eced960e8ec4c993cb8c46d260fa46cc4b1c5
+    name: rafay-dep
+    type: application
+    urls:
+    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.5.1.tgz
+    version: 2.5.1
+  - apiVersion: v2
+    appVersion: 2.5.0
+    created: "2024-08-13T10:40:23.90790442Z"
     dependencies:
     - name: base
       repository: file://charts/base
@@ -52,11 +90,11 @@ entries:
   rafaycore:
   - apiVersion: v1
     appVersion: 2.5.0
-    created: "2024-08-13T10:20:40.19603392Z"
+    created: "2024-08-13T10:40:23.973185291Z"
     description: A Helm chart for Rafay core
     digest: a23048d9db5a2d4eb22bf9b03f50b98290dd4b0194c4fa747e112327965fdd0b
     name: rafaycore
     urls:
     - https://ranjith-rafay.github.io/helm-rafay-controller/rafaycore-2.5.0.tgz
     version: 2.5.0
-generated: "2024-08-13T10:20:40.131717698Z"
+generated: "2024-08-13T10:40:23.871913242Z"
