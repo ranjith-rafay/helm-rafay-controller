@@ -2,99 +2,33 @@ apiVersion: v1
 entries:
   istio-rules:
   - apiVersion: v1
-    appVersion: 2.5.0
-    created: "2024-08-13T10:40:23.872523032Z"
+    appVersion: 2.8.0
+    created: "2024-08-25T14:13:18.392023853Z"
     description: A Helm chart for Istio-rules
-    digest: 0277f93927f0d7ef5f85c2ff7e7588c31813138abcd719d61bfdaf7cdc586ee6
+    digest: 0c8be2c1a474618da6d444aa28b7b94adb320b50bff98ed4417c535bda5307db
     name: istio-rules
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/istio-rules-2.5.0.tgz
-    version: 2.5.0
+    - https://ranjith-rafay.github.io/helm-rafay-controller/istio-rules-2.8.0.tgz
+    version: 2.8.0
   rafay-dep:
   - apiVersion: v2
-    appVersion: 2.5.0
-    created: "2024-08-13T10:40:23.941980291Z"
-    dependencies:
-    - name: base
-      repository: file://charts/base
-      version: 1.0.0
-    - name: istiod
-      repository: file://charts/istio-discovery
-      version: 1.0.0
-    - name: istio-ingress
-      repository: file://charts/istio-ingress
-      version: 1.0.0
-    - name: eck-operator
-      repository: file://charts/eck-operator
-      version: 2.6.1
-    - name: timescaledb-single
-      repository: file://charts/timescaledb-single
-      version: 0.33.1
-    - name: redis
-      repository: file://charts/redis
-      version: 17.9.5
-    - name: rafay-kafka
-      repository: file://charts/rafay-kafka
-      version: 0.2.0
-    - name: postgres-operator
-      repository: file://charts/postgres-operator
-      version: 1.9.0
-    - name: cert-manager
-      repository: file://charts/cert-manager
-      version: v1.11.0
+    appVersion: 2.8.0
+    created: "2024-08-25T14:13:18.429587028Z"
     description: A Helm chart for Kubernetes
-    digest: 19d371c8d1a8e50abc3910be449eced960e8ec4c993cb8c46d260fa46cc4b1c5
+    digest: 3a03f2bfba331c161ae9fcd3134862f8f5998eccb36f61231a9f42926a68eddf
     name: rafay-dep
     type: application
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.5.1.tgz
-    version: 2.5.1
-  - apiVersion: v2
-    appVersion: 2.5.0
-    created: "2024-08-13T10:40:23.90790442Z"
-    dependencies:
-    - name: base
-      repository: file://charts/base
-      version: 1.0.0
-    - name: istiod
-      repository: file://charts/istio-discovery
-      version: 1.0.0
-    - name: istio-ingress
-      repository: file://charts/istio-ingress
-      version: 1.0.0
-    - name: eck-operator
-      repository: file://charts/eck-operator
-      version: 2.6.1
-    - name: timescaledb-single
-      repository: file://charts/timescaledb-single
-      version: 0.33.1
-    - name: redis
-      repository: file://charts/redis
-      version: 17.9.5
-    - name: rafay-kafka
-      repository: file://charts/rafay-kafka
-      version: 0.2.0
-    - name: postgres-operator
-      repository: file://charts/postgres-operator
-      version: 1.9.0
-    - name: cert-manager
-      repository: file://charts/cert-manager
-      version: v1.11.0
-    description: A Helm chart for Kubernetes
-    digest: e6d0b350ad1fcb5f762752a06544675c8f0c10a9b9b8ed7639425b6c8894b396
-    name: rafay-dep
-    type: application
-    urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.5.0.tgz
-    version: 2.5.0
+    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.8.0.tgz
+    version: 2.8.0
   rafaycore:
   - apiVersion: v1
-    appVersion: 2.5.0
-    created: "2024-08-13T10:40:23.973185291Z"
+    appVersion: 2.8.0
+    created: "2024-08-25T14:13:18.459539167Z"
     description: A Helm chart for Rafay core
-    digest: a23048d9db5a2d4eb22bf9b03f50b98290dd4b0194c4fa747e112327965fdd0b
+    digest: 11c95945a136fa81d5c2bbf91ee49863dd885e60b5d3a3e223258e06db0a3a19
     name: rafaycore
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/rafaycore-2.5.0.tgz
-    version: 2.5.0
-generated: "2024-08-13T10:40:23.871913242Z"
+    - https://ranjith-rafay.github.io/helm-rafay-controller/rafaycore-2.8.0.tgz
+    version: 2.8.0
+generated: "2024-08-25T14:13:18.391497205Z"
