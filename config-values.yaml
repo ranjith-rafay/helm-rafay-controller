@@ -3,7 +3,7 @@ global:
   ha_enabled: false
   generate_self_signed_cert: true
   size: "M"
-  apiService_create: false   ## IN GKE cluster
+  apiService_create: true   ## IN GKE cluster
   partner_product_name: Company Controller 
   partner_name: Company Controller
   admin_user: "user@company.co"
