@@ -3,9 +3,9 @@ global:
   ha_enabled: false
   generate_self_signed_cert: true
   size: "M"
-  apiService_create: true   ## IN GKE cluster
-  partner_product_name: Company Controller 
-  partner_name: Company Controller
+  kubernetes_metrics_apir_create: true   ## Set to `false`  if api service v1beta1.metrics.k8s.io is already created.
+  partner_product_name: My Controller 
+  partner_name: User
   admin_user: "user@company.co"
   admin_password: change123
-  controller_ip: ""
+  controller_ip: ""  ## (Optional) Provide Controller Public IP address if Load Balancer permission is not enabled on this controller.
