@@ -3,7 +3,7 @@ global:
   ha_enabled: false
   generate_self_signed_cert: true
   size: "M"
-  kubernetes_metrics_apir_create: true   ## Set to `false`  if api service v1beta1.metrics.k8s.io is already created.
+  kubernetes_metrics_api_create: true   ## Set to `false`  if api service v1beta1.metrics.k8s.io is already created.
   partner_product_name: My Controller 
   partner_name: User
   admin_user: "user@company.co"
