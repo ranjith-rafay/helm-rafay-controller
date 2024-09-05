@@ -3,9 +3,9 @@ entries:
   istio-rules:
   - apiVersion: v1
     appVersion: 2.8.0
-    created: "2024-09-05T12:34:52.333526769Z"
+    created: "2024-09-05T14:49:33.930412594Z"
     description: A Helm chart for Istio-rules
-    digest: cd3ca85816a5cbf09ef2d985d23e7c875a049c43c0f901eba1eed05c5e6fa413
+    digest: a7ca246d5497a120a8a27dec69378534e0795e85773666a91f85f1fe1b1c7c80
     name: istio-rules
     urls:
     - https://ranjith-rafay.github.io/helm-rafay-controller/istio-rules-2.8.0.tgz
@@ -13,9 +13,9 @@ entries:
   rafay-dep:
   - apiVersion: v2
     appVersion: 2.8.0
-    created: "2024-09-05T12:34:52.362305998Z"
+    created: "2024-09-05T14:49:33.961614618Z"
     description: A Helm chart for Kubernetes
-    digest: 4b6dac2ff4a291513e40bcb89f9187b6856c5cae48b32aace376a0386742b7d6
+    digest: 4df077a01192fcd5210c42e7edf6f159f5326c79f2981432b7fd272018aa428c
     name: rafay-dep
     type: application
     urls:
@@ -24,11 +24,11 @@ entries:
   rafaycore:
   - apiVersion: v1
     appVersion: 2.8.0
-    created: "2024-09-05T12:34:52.394058486Z"
+    created: "2024-09-05T14:49:33.993320467Z"
     description: A Helm chart for Rafay core
-    digest: f29d0278f88b35fc51c18baca6452a859ee3d5a00d2bb012518436c4f365d83b
+    digest: e95b40815744bcaf6af9a946d1c447af1fde8b286e81535eebe1335c982ee2f7
     name: rafaycore
     urls:
     - https://ranjith-rafay.github.io/helm-rafay-controller/rafaycore-2.8.0.tgz
     version: 2.8.0
-generated: "2024-09-05T12:34:52.332919518Z"
+generated: "2024-09-05T14:49:33.929813749Z"
