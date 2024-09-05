@@ -1,11 +1,18 @@
+# The following parameters are required to deploy Rafay Controller using set of helm commands
 global:
+  ## The following parameter is a valid self-signed domain name which is used to access your Rafay controller.
   default_partner_console_domain: "user.company.net"
+  ## If the cluster is a single node, set this parameter as “false” . If the cluster have 3 or more nodes with required capacity, then set it to “true”
   ha_enabled: false
+  ## As of now, tested the Rafay controller bring up with self signed domain only. So retain it as "true" .
   generate_self_signed_cert: true
+  ## This parameter will define controller size based on the System resources and number of cluster is going to provision.
   size: "M"
-  kubernetes_metrics_api_create: true   ## Set to `false`  if api service v1beta1.metrics.k8s.io is already created.
   partner_product_name: My Controller 
   partner_name: User
+  ## This parameter defined the Username of the Rafay Operation console access Admin.
   admin_user: "user@company.co"
+  ## This parameter defined the Password of the Rafay Operation console access Admin.
   admin_password: change123
-  controller_ip: ""  ## (Optional) Provide Controller Public IP address if Load Balancer permission is not enabled on this controller.
+  ## (Optional) Provide Controller Public IP address if Load Balancer permission is not enabled on this controller.
+  controller_ip: "" 
