@@ -8,7 +8,6 @@ global:
   generate_self_signed_cert: true
   ## This parameter will define controller size based on the System resources and number of cluster is going to provision.
   size: "M"
-  partner_product_name: My Controller 
   partner_name: User
   ## This parameter defined the Username of the Rafay Operation console access Admin.
   admin_user: "user@company.co"
