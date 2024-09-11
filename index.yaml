@@ -3,32 +3,42 @@ entries:
   istio-rules:
   - apiVersion: v1
     appVersion: 2.8.0
-    created: "2024-09-11T15:51:47.668521015Z"
+    created: "2024-09-11T16:04:43.62056291Z"
     description: A Helm chart for Istio-rules
-    digest: 974a57e4b64461beefd0bea4043fce9ddcc19d725e3562a4bdd18ccf4e2d6e45
+    digest: ee13e717ec86a7a4b9d46955f9bc63785c7419c0b6c938cb9e2fa301d186e508
     name: istio-rules
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/istio-rules-2.8.2.tgz
-    version: 2.8.2
+    - https://ranjith-rafay.github.io/helm-rafay-controller/istio-rules-2.8.0.tgz
+    version: 2.8.0
   rafay-dep:
   - apiVersion: v2
     appVersion: 2.8.0
-    created: "2024-09-11T15:51:47.704996191Z"
+    created: "2024-09-11T16:04:43.690959233Z"
     description: A Helm chart for Kubernetes
-    digest: 119f024f923191f1bd1ec0663ace69c6ca9d19c680053e03d7dcab2ac7f18cb7
+    digest: f00434fca919c4ad66b6cbe32b79b7c478b1bb0d0ebaf3de2f62a1e027c2040c
     name: rafay-dep
     type: application
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.8.2.tgz
-    version: 2.8.2
+    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.8.1.tgz
+    version: 2.8.1
+  - apiVersion: v2
+    appVersion: 2.8.0
+    created: "2024-09-11T16:04:43.656602091Z"
+    description: A Helm chart for Kubernetes
+    digest: 268d97828fef830101d6a117289403744f45a66878d650490550ed61fa51eca1
+    name: rafay-dep
+    type: application
+    urls:
+    - https://ranjith-rafay.github.io/helm-rafay-controller/rafay-dep-2.8.0.tgz
+    version: 2.8.0
   rafaycore:
   - apiVersion: v1
     appVersion: 2.8.0
-    created: "2024-09-11T15:51:47.741704572Z"
+    created: "2024-09-11T16:04:43.758634183Z"
     description: A Helm chart for Rafay core
-    digest: f294a58a177ac3034ede0ff5ae0a47ed123d0bc6b4dc39e0874644cb3a2c5022
+    digest: 824be30700fce7fc3646911e7554370161b51e2488ac0f863127cfb4a8e1a958
     name: rafaycore
     urls:
-    - https://ranjith-rafay.github.io/helm-rafay-controller/rafaycore-2.8.2.tgz
-    version: 2.8.2
-generated: "2024-09-11T15:51:47.667868534Z"
+    - https://ranjith-rafay.github.io/helm-rafay-controller/rafaycore-2.8.0.tgz
+    version: 2.8.0
+generated: "2024-09-11T16:04:43.619584773Z"
