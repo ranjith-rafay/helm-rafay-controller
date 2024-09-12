@@ -24,9 +24,8 @@ global:
   ## Provides the public IP of any one of the controller instance. 
   controller_ip: "" 
   
-  =======================
-  ### Advanced settings:
-  =======================
+  ## Advanced settings
+  ----------
   
   ## Specifies the partner name associated with the controller. This name can be seen on the browser tab on the UI.
   # partner_name: User
