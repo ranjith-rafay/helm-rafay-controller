@@ -1,30 +1,33 @@
-# The following parameters are required to deploy Rafay Controller using set of helm commands
+# The following parameters are required to customize the Rafay Controller using set of helm commands
 global:
-  ## Specifies the valid domain name used to access the controller. Example: user.company-edge.net
+  ## Specifies the valid wild card domain name used to access the controller. Example: user.company-edge.net
   default_partner_console_domain: "user.company.net"
   
   ## Determines if High Availability (HA) is enabled. Set to 'false' for a single-node cluster, or 'true' for clusters with 3 or more nodes with the required capacity.
   ha_enabled: false
   
-  ## As of now, tested the Rafay controller bring up with self signed domain only. So retain it as "true" .
-  generate_self_signed_cert: true
-  
-  ## Defines the size of the controller based on the System resources and number of clusters are going to provision. Supported sizes are S (Small), M (Medium), and L (Large).
+  ## Defines the size of the controller based on the System resources. Supported sizes are S (Small), M (Medium), and L (Large).
   ## For example,
-  ## If controller is having 16 CPU and 64GB RAM,with minimum 1 Node,  define size as "S". It manily useful for POC controllers.
-  ## If controller is having 32 CPU and 64GB RAM,with minimum 3 Nodes, define size as "M". It manily useful for Default/ Regular controllers.
-  ## If controller is having 48 CPU and 72GB RAM,with minimum 3 Nodes, define size as "L". It manily useful for Large controllers.
+  ## For POC controllers having 16 CPU and 64GB RAM,with minimum 1 Node,  define size as "S". 
+  ## For Production controllers use cases having 32 CPU and 64GB RAM,with minimum 3 Nodes, define size as "M".(Default)
+  ## For Large-scale production controllers having 48 CPU and 72GB RAM,with minimum 3 Nodes, define size as "L".
   size: "M"
   
-  ## Specifies the partner name associated with the controller. This name can be seen on the browser tab on the UI.
-  partner_name: User
-  
-  ## Sets the admin username for accessing the Operations console.
+  ## Admin username for accessing the Operations console.
   admin_user: "user@company.co"
   
-  ## Sets the admin password for accessing the Operations console. This value should be provided in base64-encoded format. This value should be provided in base64-encoded format. 
+  ## Admin password for accessing the Operations console in base64 encoded format.
   ## For example, base64 encoded format of `change123` is `Y2hhbmdlMTIzCg==`
   admin_password: Y2hhbmdlMTIzCg==
   
-  ## Provides the public IP of the controller. Required if the Load Balancer permission is not attached to the cluster.
+  ## This value is required for non-cloud environments like Baremetal or VMs where Load Balancer provisioning for k8s services is not supported.
+  ## Provides the public IP of any one of the controller instance. 
   controller_ip: "" 
+  
+  =======================
+  ### Advanced settings:
+  =======================
+  
+  ## Specifies the partner name associated with the controller. This name can be seen on the browser tab on the UI.
+  # partner_name: User
+  
