@@ -22,7 +22,8 @@ global:
   ## Sets the admin username for accessing the Operations console.
   admin_user: "user@company.co"
   
-  ## Sets the admin password for accessing the Operations console. This value should be provided in base64-encoded format.
+  ## Sets the admin password for accessing the Operations console. This value should be provided in base64-encoded format. This value should be provided in base64-encoded format. 
+  ## For example, base64 encoded format of `change123` is `Y2hhbmdlMTIzCg==`
   admin_password: Y2hhbmdlMTIzCg==
   
   ## Provides the public IP of the controller. Required if the Load Balancer permission is not attached to the cluster.
