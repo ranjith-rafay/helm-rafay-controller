@@ -1,17 +1,29 @@
 # The following parameters are required to deploy Rafay Controller using set of helm commands
 global:
-  ## The following parameter is a valid self-signed domain name which is used to access your Rafay controller.
+  ## Specifies the valid domain name used to access the controller. Example: user.company-edge.net
   default_partner_console_domain: "user.company.net"
-  ## If the cluster is a single node, set this parameter as “false” . If the cluster have 3 or more nodes with required capacity, then set it to “true”
+  
+  ## Determines if High Availability (HA) is enabled. Set to 'false' for a single-node cluster, or 'true' for clusters with 3 or more nodes with the required capacity.
   ha_enabled: false
+  
   ## As of now, tested the Rafay controller bring up with self signed domain only. So retain it as "true" .
   generate_self_signed_cert: true
-  ## This parameter will define controller size based on the System resources and number of cluster is going to provision.
+  
+  ## Defines the size of the controller based on the System resources and number of clusters are going to provision. Supported sizes are S (Small), M (Medium), and L (Large).
+  ## For example,
+  ## If controller is having 16 CPU and 64GB RAM,with minimum 1 Node,  define size as "S". It manily useful for POC controllers.
+  ## If controller is having 32 CPU and 64GB RAM,with minimum 3 Nodes, define size as "M". It manily useful for Default/ Regular.
+  ## If controller is having 48 CPU and 72GB RAM,with minimum 3 Nodes, define size as "L". It manily useful for Large Controllers.
   size: "M"
+  
+  ## Specifies the partner name associated with the controller. This name can be seen on the browser tab on the UI.
   partner_name: User
-  ## This parameter defined the Username of the Rafay Operation console access Admin.
+  
+  ## Sets the admin username for accessing the Operations console.
   admin_user: "user@company.co"
-  ## This parameter defined the Password of the Rafay Operation console access Admin. This should be mentioned in based64 encoded form.
+  
+  ## Sets the admin password for accessing the Operations console.
   admin_password: Y2hhbmdlMTIzCg==
-  ## (Optional) Provide Controller Public IP address if Load Balancer permission is not enabled on this controller.
+  
+  ## Provides the public IP of the controller. Required if the Load Balancer permission is not attached to the cluster.
   controller_ip: "" 
