@@ -12,8 +12,8 @@ global:
   ## Defines the size of the controller based on the System resources and number of clusters are going to provision. Supported sizes are S (Small), M (Medium), and L (Large).
   ## For example,
   ## If controller is having 16 CPU and 64GB RAM,with minimum 1 Node,  define size as "S". It manily useful for POC controllers.
-  ## If controller is having 32 CPU and 64GB RAM,with minimum 3 Nodes, define size as "M". It manily useful for Default/ Regular.
-  ## If controller is having 48 CPU and 72GB RAM,with minimum 3 Nodes, define size as "L". It manily useful for Large Controllers.
+  ## If controller is having 32 CPU and 64GB RAM,with minimum 3 Nodes, define size as "M". It manily useful for Default/ Regular controllers.
+  ## If controller is having 48 CPU and 72GB RAM,with minimum 3 Nodes, define size as "L". It manily useful for Large controllers.
   size: "M"
   
   ## Specifies the partner name associated with the controller. This name can be seen on the browser tab on the UI.
