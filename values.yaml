@@ -18,7 +18,7 @@ global:
   
   ## Admin password for accessing the Operations console in base64 encoded format.
   ## For example, base64 encoded format of `change123` is `Y2hhbmdlMTIz`
-  admin_password: Y2hhbmdlMTIz
+  admin_passwd: Y2hhbmdlMTIz
   
   ## This value is required for non-cloud environments like Baremetal or VMs where Load Balancer provisioning for k8s services is not supported.
   ## Provides the public IP of any one of the controller instance. 
